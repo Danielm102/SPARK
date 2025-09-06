@@ -61,6 +61,7 @@ set(STM32_Drivers_Src
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/Components/Stepper.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/Components/ws2812.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/Libraries/status.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/Libraries/VoltageReader.c
 )
 
 # Drivers Midllewares

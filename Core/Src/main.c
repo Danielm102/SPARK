@@ -58,9 +58,12 @@ DMA_HandleTypeDef hdma_tim2_ch1;
 volatile uint8_t dma_waiting_stepper;
 volatile uint8_t dma_waiting_ws2812;
 
-uint8_t R = 0;
-uint8_t G = 0;
-uint8_t B = 0;
+float voltage_driver;
+float temperature_NTC1;
+float temperature_NTC2;
+float voltage_internal;
+float voltage_t;
+float voltage_bat;
 
 uint8_t SPARK_status = 0;
 /* USER CODE END PV */
@@ -124,6 +127,27 @@ int main(void)
   MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
   SPARK_status = 1;
+  uint8_t drv_data = 0;
+  uint8_t drv_status = 0;
+
+  Stepper_Init();
+
+  Stepper_Wakeup();
+
+  HAL_Delay(10);
+
+  Stepper_Enable();
+  
+  Stepper_SetTorque(DRV_TRQ_08_16);
+  Stepper_EnableControl();
+  Stepper_setMicrostep(DRV_STEP_FULL_100);
+  Stepper_read_reg(DRV_CTRL3_REG, &drv_data);
+
+  Stepper_moveSteps(150);
+
+  
+
+  //Stepper_Sleep();
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -132,7 +156,10 @@ int main(void)
   {
     /* USER CODE END WHILE */
     HAL_Delay(10);
-    ShowStatus(RGB_LED, SPARK_status, 1, 100);
+    //ShowStatus(RGB_LED, SPARK_status, 1, 100);
+    temperature_NTC1 = readTemperature(ADC_CHANNEL_0);
+    temperature_NTC2 = readTemperature(ADC_CHANNEL_1);
+    voltage_driver = readVoltage(ADC_CHANNEL_2) * 12.2f / 2.2f;
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
@@ -347,17 +374,17 @@ static void MX_SPI1_Init(void)
   hspi1.Instance = SPI1;
   hspi1.Init.Mode = SPI_MODE_MASTER;
   hspi1.Init.Direction = SPI_DIRECTION_2LINES;
-  hspi1.Init.DataSize = SPI_DATASIZE_4BIT;
+  hspi1.Init.DataSize = SPI_DATASIZE_8BIT;
   hspi1.Init.CLKPolarity = SPI_POLARITY_LOW;
-  hspi1.Init.CLKPhase = SPI_PHASE_1EDGE;
+  hspi1.Init.CLKPhase = SPI_PHASE_2EDGE;
   hspi1.Init.NSS = SPI_NSS_SOFT;
-  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_2;
+  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_4;
   hspi1.Init.FirstBit = SPI_FIRSTBIT_MSB;
   hspi1.Init.TIMode = SPI_TIMODE_DISABLE;
   hspi1.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
   hspi1.Init.CRCPolynomial = 7;
   hspi1.Init.CRCLength = SPI_CRC_LENGTH_DATASIZE;
-  hspi1.Init.NSSPMode = SPI_NSS_PULSE_ENABLE;
+  hspi1.Init.NSSPMode = SPI_NSS_PULSE_DISABLE; // ?
   if (HAL_SPI_Init(&hspi1) != HAL_OK)
   {
     Error_Handler();
@@ -428,9 +455,9 @@ static void MX_TIM1_Init(void)
 
   /* USER CODE END TIM1_Init 1 */
   htim1.Instance = TIM1;
-  htim1.Init.Prescaler = 0;
+  htim1.Init.Prescaler = 800 * STEPPER_STEP_TIME - 1;
   htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim1.Init.Period = 65535;
+  htim1.Init.Period = 19;
   htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim1.Init.RepetitionCounter = 0;
   htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
@@ -640,10 +667,15 @@ static void MX_GPIO_Init(void)
 /* USER CODE BEGIN 4 */
 void HAL_TIM_PWM_PulseFinishedCallback(TIM_HandleTypeDef *htim)
 {
-    if (htim->Instance == TIM2 && htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1) {
-        HAL_TIM_PWM_Stop_DMA(&htim2, TIM_CHANNEL_1);
-        dma_waiting_ws2812 = 0;
-    }
+  if(htim->Instance == TIM1 && htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1) {
+    HAL_TIM_PWM_Stop_DMA(&htim1, TIM_CHANNEL_1);
+    dma_waiting_stepper = 0;
+    Stepper_Disable();
+  }
+  if(htim->Instance == TIM2 && htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1) {
+    HAL_TIM_PWM_Stop_DMA(&htim2, TIM_CHANNEL_1);
+    dma_waiting_ws2812 = 0;
+  }
 }
 /* USER CODE END 4 */
 

@@ -3,7 +3,9 @@
         "main.h": "c",
         "stm32g0xx_hal.h": "c",
         "Stepper.h": "c",
-        "ws2812.h": "c"
+        "ws2812.h": "c",
+        "voltagereader.h": "c",
+        "cmath": "c"
     },
     "C_Cpp.errorSquiggles": "enabled",
 }

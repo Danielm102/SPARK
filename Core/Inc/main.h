@@ -34,6 +34,7 @@ extern "C" {
 #include "Stepper.h"
 #include "stdbool.h"
 #include "status.h"
+#include "VoltageReader.h"
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/
