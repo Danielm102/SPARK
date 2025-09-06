@@ -51,6 +51,7 @@ SPI_HandleTypeDef hspi2;
 
 TIM_HandleTypeDef htim1;
 TIM_HandleTypeDef htim2;
+DMA_HandleTypeDef hdma_tim1_ch1;
 DMA_HandleTypeDef hdma_tim2_ch1;
 
 /* USER CODE BEGIN PV */
@@ -123,7 +124,7 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
-
+    HAL_Delay(100);
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
@@ -542,6 +543,9 @@ static void MX_DMA_Init(void)
   /* DMA1_Channel1_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(DMA1_Channel1_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(DMA1_Channel1_IRQn);
+  /* DMA1_Channel2_3_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA1_Channel2_3_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Channel2_3_IRQn);
 
 }
 
@@ -563,7 +567,7 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOA_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, DRV_CS_Pin|LED1_Pin|LED2_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOB, DRV_CS_Pin|LED1_Pin, GPIO_PIN_SET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOA, DRV_DIR_Pin|DRV_SLEEP_Pin, GPIO_PIN_RESET);
@@ -571,10 +575,13 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(DRV_EN_GPIO_Port, DRV_EN_Pin, GPIO_PIN_RESET);
 
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, GPIO_PIN_RESET);
+
   /*Configure GPIO pin : FC_CS_Pin */
   GPIO_InitStruct.Pin = FC_CS_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING_FALLING;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(FC_CS_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pins : SW1_Pin SW2_Pin */
@@ -585,16 +592,16 @@ static void MX_GPIO_Init(void)
 
   /*Configure GPIO pin : DRV_FAULT_Pin */
   GPIO_InitStruct.Pin = DRV_FAULT_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(DRV_FAULT_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : DRV_CS_Pin LED1_Pin LED2_Pin */
-  GPIO_InitStruct.Pin = DRV_CS_Pin|LED1_Pin|LED2_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  /*Configure GPIO pin : DRV_CS_Pin */
+  GPIO_InitStruct.Pin = DRV_CS_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_OD;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+  HAL_GPIO_Init(DRV_CS_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pins : DRV_DIR_Pin DRV_SLEEP_Pin */
   GPIO_InitStruct.Pin = DRV_DIR_Pin|DRV_SLEEP_Pin;
@@ -609,6 +616,13 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(DRV_EN_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : LED1_Pin LED2_Pin */
+  GPIO_InitStruct.Pin = LED1_Pin|LED2_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
   /* USER CODE BEGIN MX_GPIO_Init_2 */
 
