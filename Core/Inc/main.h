@@ -28,10 +28,12 @@ extern "C" {
 
 /* Includes ------------------------------------------------------------------*/
 #include "stm32g0xx_hal.h"
-
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "ws2812.h"
+#include "Stepper.h"
+#include "stdbool.h"
+#include "status.h"
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/

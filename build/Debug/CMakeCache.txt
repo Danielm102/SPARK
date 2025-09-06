@@ -232,6 +232,15 @@ SPARK_IS_TOP_LEVEL:STATIC=ON
 //Value Computed by CMake
 SPARK_SOURCE_DIR:STATIC=C:/Users/epicd/Documents/GitHub/SPARK
 
+//Value Computed by CMake
+stm32cubemx_BINARY_DIR:STATIC=C:/Users/epicd/Documents/GitHub/SPARK/build/Debug/cmake/stm32cubemx
+
+//Value Computed by CMake
+stm32cubemx_IS_TOP_LEVEL:STATIC=OFF
+
+//Value Computed by CMake
+stm32cubemx_SOURCE_DIR:STATIC=C:/Users/epicd/Documents/GitHub/SPARK/cmake/stm32cubemx
+
 
 ########################
 # INTERNAL cache entries

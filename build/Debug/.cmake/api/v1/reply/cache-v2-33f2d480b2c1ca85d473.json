@@ -1212,6 +1212,42 @@
 			],
 			"type" : "STATIC",
 			"value" : "C:/Users/epicd/Documents/GitHub/SPARK"
+		},
+		{
+			"name" : "stm32cubemx_BINARY_DIR",
+			"properties" : 
+			[
+				{
+					"name" : "HELPSTRING",
+					"value" : "Value Computed by CMake"
+				}
+			],
+			"type" : "STATIC",
+			"value" : "C:/Users/epicd/Documents/GitHub/SPARK/build/Debug/cmake/stm32cubemx"
+		},
+		{
+			"name" : "stm32cubemx_IS_TOP_LEVEL",
+			"properties" : 
+			[
+				{
+					"name" : "HELPSTRING",
+					"value" : "Value Computed by CMake"
+				}
+			],
+			"type" : "STATIC",
+			"value" : "OFF"
+		},
+		{
+			"name" : "stm32cubemx_SOURCE_DIR",
+			"properties" : 
+			[
+				{
+					"name" : "HELPSTRING",
+					"value" : "Value Computed by CMake"
+				}
+			],
+			"type" : "STATIC",
+			"value" : "C:/Users/epicd/Documents/GitHub/SPARK/cmake/stm32cubemx"
 		}
 	],
 	"kind" : "cache",

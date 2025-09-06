@@ -55,7 +55,14 @@ DMA_HandleTypeDef hdma_tim1_ch1;
 DMA_HandleTypeDef hdma_tim2_ch1;
 
 /* USER CODE BEGIN PV */
+volatile uint8_t dma_waiting_stepper;
+volatile uint8_t dma_waiting_ws2812;
 
+uint8_t R = 0;
+uint8_t G = 0;
+uint8_t B = 0;
+
+uint8_t SPARK_status = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -116,7 +123,7 @@ int main(void)
   MX_DAC1_Init();
   MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
-
+  SPARK_status = 1;
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -124,7 +131,8 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
-    HAL_Delay(100);
+    HAL_Delay(10);
+    ShowStatus(RGB_LED, SPARK_status, 1, 100);
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
@@ -502,7 +510,7 @@ static void MX_TIM2_Init(void)
   htim2.Instance = TIM2;
   htim2.Init.Prescaler = 0;
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim2.Init.Period = 4294967295;
+  htim2.Init.Period = 11;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_PWM_Init(&htim2) != HAL_OK)
@@ -630,7 +638,13 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-
+void HAL_TIM_PWM_PulseFinishedCallback(TIM_HandleTypeDef *htim)
+{
+    if (htim->Instance == TIM2 && htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1) {
+        HAL_TIM_PWM_Stop_DMA(&htim2, TIM_CHANNEL_1);
+        dma_waiting_ws2812 = 0;
+    }
+}
 /* USER CODE END 4 */
 
 /**
