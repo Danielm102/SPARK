@@ -2,6 +2,7 @@
 #define Stepper_H_
 
 #include "main.h"
+#include "stdbool.h"
 
 #define MAX_STEPPER_STEPS 400   // Maximum number of steps to move in one call
 #define STEPPER_STEP_TIME 2000   // Time in us for one step
@@ -15,9 +16,45 @@ typedef enum {
     forward = 1
 } stepper_dir_t;
 
-extern TIM_HandleTypeDef htim1;
+typedef struct {
+    bool FAULT;
+    bool SPI_ERROR;
+    bool UVLO;      // supply undervoltage lockout
+    bool CPUV;      // charge pump undervoltage
+    bool OCP;       // overcurrent condition
+    bool STL;       // motor stall condition
+    bool TF;        // temperature warning or overtemperature shutdown
+    bool OL;        // open load condition
+} DRV8434S_status_t;
 
+typedef struct {
+    bool OCP_HS1_A; // overcurrent: AOUT, half bridge 1, high-side
+    bool OCP_LS1_A; // overcurrent: AOUT, half bridge 1, low-side
+    bool OCP_HS2_A; // overcurrent: AOUT, half bridge 2, high-side
+    bool OCP_LS2_A; // overcurrent: AOUT, half bridge 2, low-side
+    bool OCP_HS1_B; // overcurrent: BOUT, half bridge 1, high-side
+    bool OCP_LS1_B; // overcurrent: BOUT, half bridge 1, low-side
+    bool OCP_HS2_B; // overcurrent: BOUT, half bridge 2, high-side
+    bool OCP_LS2_B; // overcurrent: BOUT, half bridge 2, low-side
+} DRV8434S_diag1_t;
+
+typedef struct {
+    bool OTW;        // overtemperature warning
+    bool OTS;        // overtemperature shutdown
+    bool STL_LRN_OK; // stall detection learning success
+    bool STALL;      // motor stall condition
+    bool OL_B;       // open-load detection on BOUT
+    bool OL_A;       // open-load detection on AOUT
+} DRV8434S_diag2_t;
+
+extern TIM_HandleTypeDef htim1;
 extern SPI_HandleTypeDef hspi1;
+
+extern DRV8434S_status_t DRV_status;
+extern DRV8434S_diag1_t DRV_diag1;
+extern DRV8434S_diag2_t DRV_diag2;
+
+extern uint8_t DRV_status_byte;
 
 extern float pos_Stepper;
 extern uint16_t pwmData[MAX_STEPPER_STEPS];
@@ -31,6 +68,7 @@ void Stepper_Init();
 uint8_t Stepper_write_reg(uint8_t address, uint8_t data);
 uint8_t Stepper_read_reg(uint8_t address, uint8_t *data);
 
+void Stepper_GetFullStatus();
 void Stepper_SetTorque(uint8_t torque);
 void Stepper_EnableControl();
 void Stepper_setMicrostep(uint8_t microstep_mode);
@@ -51,6 +89,8 @@ void Stepper_Send (int16_t steps);
 
 
 #define DRV_SPI_READ 0x40 // W0=1 for read
+
+#define DRV_STATUS_BYTE_OK 0xC0
 
 #define DRV_FAULT_STATUS_REG 0x00   // Type: R
 #define DRV_DIAG_STATUS1_REG 0x01   // Type: R
