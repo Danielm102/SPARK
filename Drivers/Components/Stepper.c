@@ -69,7 +69,7 @@ void Stepper_SetDirection(stepper_dir_t dir) {
 
 void Stepper_Init() {
     for (int i = 0; i < MAX_STEPPER_STEPS; i++) {
-        pwmData[i] = 10; // Initialize the PWM data array
+        pwmData[i] = 8; // Initialize the PWM data array
     }
 }
 
@@ -80,6 +80,7 @@ int16_t Stepper_moveSteps(int16_t steps) {
     if (steps == 0)
         return 0;       // No steps to move
 
+    Stepper_Enable();   // make sure stepper is enabled
     int16_t steps_cmd;
 
     if (steps > MAX_STEPPER_STEPS)

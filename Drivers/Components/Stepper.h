@@ -3,8 +3,8 @@
 
 #include "main.h"
 
-#define MAX_STEPPER_STEPS 1000   // Maximum number of steps to move in one call
-#define STEPPER_STEP_TIME 2     // Time in ms for one step
+#define MAX_STEPPER_STEPS 400   // Maximum number of steps to move in one call
+#define STEPPER_STEP_TIME 2000   // Time in us for one step
 
 #define CURRENT_SCALE_KV 1.32
 

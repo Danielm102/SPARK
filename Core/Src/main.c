@@ -143,7 +143,10 @@ int main(void)
   Stepper_setMicrostep(DRV_STEP_FULL_100);
   Stepper_read_reg(DRV_CTRL3_REG, &drv_data);
 
-  Stepper_moveSteps(150);
+  Stepper_moveSteps(200);
+  while(dma_waiting_stepper);
+  HAL_Delay(50);
+  Stepper_moveSteps(-200);
 
   
 
@@ -455,9 +458,9 @@ static void MX_TIM1_Init(void)
 
   /* USER CODE END TIM1_Init 1 */
   htim1.Instance = TIM1;
-  htim1.Init.Prescaler = 800 * STEPPER_STEP_TIME - 1;
+  htim1.Init.Prescaler = STEPPER_STEP_TIME - 1;
   htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim1.Init.Period = 19;
+  htim1.Init.Period = 15;
   htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim1.Init.RepetitionCounter = 0;
   htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
