@@ -136,8 +136,8 @@ int main(void)
 
   Stepper_Enable();
   
-  Stepper_SetTorque(DRV_TRQ_08_16);
-  Stepper_EnableControl();
+  Stepper_setTorque(DRV_TRQ_08_16);
+  Stepper_enableControl();
   Stepper_setMicrostep(DRV_STEP_FULL_100);
 
   Stepper_moveSteps(200);
@@ -160,7 +160,7 @@ int main(void)
     temperature_NTC1 = readTemperature(ADC_CHANNEL_0);
     temperature_NTC2 = readTemperature(ADC_CHANNEL_1);
     voltage_driver = readVoltage(ADC_CHANNEL_2) * 12.2f / 2.2f;
-    Stepper_GetFullStatus();
+    Stepper_getFullStatus();
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */

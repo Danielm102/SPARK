@@ -61,22 +61,43 @@ extern uint16_t pwmData[MAX_STEPPER_STEPS];
 
 extern volatile uint8_t dma_waiting_stepper;
 
-
-void Stepper_SetDirection(stepper_dir_t dir);
-void Stepper_Init();
-
+// DRV8434S SPI functions
 uint8_t Stepper_write_reg(uint8_t address, uint8_t data);
 uint8_t Stepper_read_reg(uint8_t address, uint8_t *data);
-
-void Stepper_GetFullStatus();
-void Stepper_SetTorque(uint8_t torque);
-void Stepper_EnableControl();
+void Stepper_getFullStatus();
+void Stepper_setOpenLoadMode(bool mode);
+void Stepper_setTorque(uint8_t torque);
+void Stepper_setDecay(uint8_t decay);
+void Stepper_setTOFF(uint8_t t_off);
+void Stepper_enableControl();
+void Stepper_disableControl();
 void Stepper_setMicrostep(uint8_t microstep_mode);
+void Stepper_configInputMode(uint8_t input_mode);
+void Stepper_setDIR_SPI(stepper_dir_t dir);
+void Stepper_setSTEP_SPI(bool step);
+void Stepper_setTemperatureFault(bool OTW_report_nFAULT, bool OTS_auto_recovery);
+void Stepper_setOvercurrentFault(bool OC_auto_retry);
+void Stepper_OpenLoadDetection(bool OL_en);
+void Stepper_lockRegisters();
+void Stepper_unlockRegisters();
+void Stepper_clearFaults();
+void Stepper_setStallDetection(bool STL_en, bool STL_report);
+void Stepper_learnStallCount();
+void Stepper_setStallThreshold(uint16_t count);
+void Stepper_scaleTorqueCount(bool TRQ_scale);
+void Stepper_setSpreadSpectrum(bool SSC_en);
+void Stepper_setRCRipple(uint8_t ripple);
+void Stepper_getTRQCount(uint16_t *count);
+void Stepper_getREV_ID(uint8_t *id);
 
+// Stepper motor control functions
+void Stepper_Init();
+void Stepper_setDirection(stepper_dir_t dir);
 int16_t Stepper_moveSteps(int16_t steps);
 void Stepper_movetoPos(float pos_cmd);
-void Stepper_Send (int16_t steps);
 
+// Error handling
+void Stepper_FaultHandler();
 
 #define Stepper_Select()    HAL_GPIO_WritePin(DRV_CS_GPIO_Port, DRV_CS_Pin, 0)
 #define Stepper_Deselect()  HAL_GPIO_WritePin(DRV_CS_GPIO_Port, DRV_CS_Pin, 1)
@@ -92,6 +113,7 @@ void Stepper_Send (int16_t steps);
 
 #define DRV_STATUS_BYTE_OK 0xC0
 
+// register addresses
 #define DRV_FAULT_STATUS_REG 0x00   // Type: R
 #define DRV_DIAG_STATUS1_REG 0x01   // Type: R
 #define DRV_DIAG_STATUS2_REG 0x02   // Type: R
@@ -105,33 +127,86 @@ void Stepper_Send (int16_t steps);
 #define DRV_CTRL8_REG 0x0A          // Type: R
 #define DRV_CTRL9_REG 0x0B          // Type: R
 
-#define DRV_STEP_FULL_100   0b0000  // 100% current
-#define DRV_STEP_FULL_71    0b0001  // 71 % current
-#define DRV_STEP_1_2_NC     0b0010  // non-circular
-#define DRV_STEP_1_2        0b0011
-#define DRV_STEP_1_4        0b0100
-#define DRV_STEP_1_8        0b0101
-#define DRV_STEP_1_16       0b0110
-#define DRV_STEP_1_32       0b0111
-#define DRV_STEP_1_64       0b1000
-#define DRV_STEP_1_128      0b1001
-#define DRV_STEP_1_256      0b1010
+// CTRL1 bitfields
+#define DRV_OL_RELEASE_AFTER_CLEAR 0b0  // default
+#define DRV_OL_RELEASE_IMMEDIATELY 0b1
 
-#define DRV_TRQ_16_16   0b0000
-#define DRV_TRQ_15_16   0b0001
-#define DRV_TRQ_14_16   0b0010
-#define DRV_TRQ_13_16   0b0011
-#define DRV_TRQ_12_16   0b0100
-#define DRV_TRQ_11_16   0b0101
-#define DRV_TRQ_10_16   0b0110
-#define DRV_TRQ_09_16   0b0111
-#define DRV_TRQ_08_16   0b1000
-#define DRV_TRQ_07_16   0b1001
-#define DRV_TRQ_06_16   0b1010
-#define DRV_TRQ_05_16   0b1011
-#define DRV_TRQ_04_16   0b1100
-#define DRV_TRQ_03_16   0b1101
-#define DRV_TRQ_02_16   0b1110
-#define DRV_TRQ_01_16   0b1111
+#define DRV_TRQ_16_16   0b0000  // 100% | default
+#define DRV_TRQ_15_16   0b0001  // 93.75%
+#define DRV_TRQ_14_16   0b0010  // 87.5%
+#define DRV_TRQ_13_16   0b0011  // 81.25%
+#define DRV_TRQ_12_16   0b0100  // 75%
+#define DRV_TRQ_11_16   0b0101  // 68.75%
+#define DRV_TRQ_10_16   0b0110  // 62.5%
+#define DRV_TRQ_09_16   0b0111  // 56.25%
+#define DRV_TRQ_08_16   0b1000  // 50%
+#define DRV_TRQ_07_16   0b1001  // 43.75%
+#define DRV_TRQ_06_16   0b1010  // 37.5%
+#define DRV_TRQ_05_16   0b1011  // 31.25%
+#define DRV_TRQ_04_16   0b1100  // 25%
+#define DRV_TRQ_03_16   0b1101  // 18.75%
+#define DRV_TRQ_02_16   0b1110  // 12.5%
+#define DRV_TRQ_01_16   0b1111  // 6.25%
+
+// CTRL2 bitfields
+#define DRV_DECAY_ISLOW_DSLOW               0b000 // increasing SLOW, decreasing SLOW
+#define DRV_DECAY_ISLOW_DMI30               0b001 // increasing SLOW, decreasing MIXED 30%
+#define DRV_DECAY_ISLOW_DMI60               0b010 // increasing SLOW, decreasing MIXED 60%
+#define DRV_DECAY_ISLOW_DFAST               0b011 // increasing SLOW, decreasing FAST
+#define DRV_DECAY_IMI30_DMI30               0b100 // increasing & decreasing MIXED 30%
+#define DRV_DECAY_IMI60_DMI60               0b101 // increasing & decreasing MIXED 60%
+#define DRV_DECAY_SMART_TUNE_DYNAMIC_DECAY  0b110 // smart tune dynamic decay
+#define DRV_DECAY_SMART_TUNE_RIPPLE_CONTROL 0b111 // smart tune ripple control
+
+#define DRV_TOFF_07_US 0b00
+#define DRV_TOFF_16_US 0b01 // default
+#define DRV_TOFF_24_US 0b10
+#define DRV_TOFF_32_US 0b11
+
+// CTRL3 bitfields
+#define DRV_STEP_FULL_100   0b0000  // 100% current full-step
+#define DRV_STEP_FULL_71    0b0001  // 71 % current full-step
+#define DRV_STEP_1_2_NC     0b0010  // non-circular 1/2 step
+#define DRV_STEP_1_2        0b0011  // 1/2 step
+#define DRV_STEP_1_4        0b0100  // 1/4 step
+#define DRV_STEP_1_8        0b0101  // 1/8 step
+#define DRV_STEP_1_16       0b0110  // 1/16 step
+#define DRV_STEP_1_32       0b0111  // 1/32 step
+#define DRV_STEP_1_64       0b1000  // 1/64 step
+#define DRV_STEP_1_128      0b1001  // 1/128 step
+#define DRV_STEP_1_256      0b1010  // 1/256 step
+
+#define DRV_INPUT_MODE_PIN  0b00    // outputs follow input pins
+#define DRV_INPUT_MODE_SPI  0b11    // outputs follow spi registers
+
+// CTRL4 bitfields
+#define DRV_OTW_NO_REPORT_NFAULT    0
+#define DRV_OTW_REPORT_ON_NFAULT    1
+#define DRV_OTS_MODE_LATCHED_FAULT  0
+#define DRV_OTS_MODE_AUTO_RETRY     1
+
+#define DRV_OCP_MODE_LATCHED_FAULT  0
+#define DRV_OCP_MODE_AUTO_RETRY     1
+
+#define DRV_LOCK_REGISTERS      0b110
+#define DRV_UNLOCK_REGISTERS    0b011
+
+// CTRL5 bitfields
+#define DRV_STALL_DETECTION_OFF     0
+#define DRV_STALL_DETECTION_ON      1
+#define DRV_STALL_NO_REPORT_NFAULT  0
+#define DRV_STALL_REPORT_ON_NFAULT  1
+
+//CTRL7 bitfields
+#define DRV_TRQ_SCALE_NONE  0   // no torque count scaling is applied | default
+#define DRV_TRQ_SCALE_MLT8  1   // torque count is scaled up by a factor of 8
+
+#define DRV_SPREAD_SPECTRUM_OFF 0   
+#define DRV_SPREAD_SPECTRUM_ON  1       // default
+
+#define DRV_RC_RIPPLE_1_PERCENT 0b00    // default
+#define DRV_RC_RIPPLE_2_PERCENT 0b01
+#define DRV_RC_RIPPLE_4_PERCENT 0b10
+#define DRV_RC_RIPPLE_6_PERCENT 0b11
 
 #endif /* Stepper_H_ */
