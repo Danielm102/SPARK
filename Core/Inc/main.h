@@ -58,7 +58,14 @@ void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
 void Error_Handler(void);
 
 /* USER CODE BEGIN EFP */
+void RunOnce();
+void Loop_1000Hz();
+void Loop_100Hz();
+void Loop_10Hz();
 
+uint32_t HAL_GetTickUS(void);
+void TimeMeasureStart(void);
+uint32_t TimeMeasureStop(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
@@ -102,7 +109,7 @@ void Error_Handler(void);
 #define FC_SCK_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
-
+#define TICK_US_RESET_THRESHOLD 1000000000
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus

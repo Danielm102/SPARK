@@ -51,18 +51,32 @@ SPI_HandleTypeDef hspi2;
 
 TIM_HandleTypeDef htim1;
 TIM_HandleTypeDef htim2;
+TIM_HandleTypeDef htim3;
 DMA_HandleTypeDef hdma_tim1_ch1;
 DMA_HandleTypeDef hdma_tim2_ch1;
 
 /* USER CODE BEGIN PV */
+uint16_t tick_ks = 0;
+uint32_t tick_ms = 0;
+uint32_t tick_us = 0;
+uint32_t tick_raw = 0;
+uint32_t tick_us_start = 0;
+uint16_t overflow_count = 0;
+
+uint32_t dt_1000Hz;
+uint32_t dt_100Hz;
+uint32_t dt_10Hz;
+
+uint32_t loop_counter_1000Hz = 0;
+uint32_t loop_counter_100Hz = 0;
+uint32_t loop_counter_10Hz = 0;
+
 volatile uint8_t dma_waiting_ws2812;
 
 float voltage_driver;
 float temperature_NTC1;
 float temperature_NTC2;
-float voltage_internal;
-float voltage_t;
-float voltage_bat;
+uint16_t Stepper_TRQ;
 
 uint8_t SPARK_status = 0;
 /* USER CODE END PV */
@@ -78,6 +92,7 @@ static void MX_SPI2_Init(void);
 static void MX_ADC1_Init(void);
 static void MX_DAC1_Init(void);
 static void MX_TIM2_Init(void);
+static void MX_TIM3_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -124,30 +139,63 @@ int main(void)
   MX_ADC1_Init();
   MX_DAC1_Init();
   MX_TIM2_Init();
+  MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
-  SPARK_status = 1;
-
-  Stepper_Init();
-
-  Stepper_moveSteps(200);
-  //HAL_Delay(50);
-  //Stepper_moveSteps(-1);
-
+  
+  RunOnce();
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-    /* USER CODE END WHILE */
-    HAL_Delay(10);
-    //ShowStatus(RGB_LED, SPARK_status, 1, 100);
-    temperature_NTC1 = readTemperature(ADC_CHANNEL_0);
-    temperature_NTC2 = readTemperature(ADC_CHANNEL_1);
-    voltage_driver = readVoltage(ADC_CHANNEL_2) * 12.2f / 2.2f;
-    /* USER CODE BEGIN 3 */
+    HAL_GetTickUS();
+    
+    if(tick_us > 1000 * loop_counter_1000Hz - TICK_US_RESET_THRESHOLD * tick_ks) {
+      TimeMeasureStart();
+      loop_counter_1000Hz++;
+      Loop_1000Hz();
+      dt_1000Hz = TimeMeasureStop();
+    }
+
+    if(tick_us > 10000 * loop_counter_100Hz - TICK_US_RESET_THRESHOLD * tick_ks) {
+      TimeMeasureStart();
+      loop_counter_100Hz++;
+      Loop_100Hz();
+      dt_100Hz = TimeMeasureStop();
+    }
+    
+    if(tick_us > 100000 * loop_counter_10Hz - TICK_US_RESET_THRESHOLD * tick_ks) {
+      TimeMeasureStart();
+      loop_counter_10Hz++;
+      Loop_10Hz();
+      dt_10Hz = TimeMeasureStop();
+    }
   }
   /* USER CODE END 3 */
+}
+
+void RunOnce() 
+{
+  SPARK_status = 1;
+  Stepper_Init();
+}
+
+void Loop_1000Hz()
+{
+  
+}
+
+void Loop_100Hz()
+{
+  ShowStatus(RGB_LED, SPARK_status, 1, 100);
+}
+
+void Loop_10Hz()
+{
+  temperature_NTC1 = readTemperature(ADC_CHANNEL_0);
+  temperature_NTC2 = readTemperature(ADC_CHANNEL_1);
+  voltage_driver = readVoltage(ADC_CHANNEL_2) * 12.2f / 2.2f;
 }
 
 /**
@@ -369,7 +417,7 @@ static void MX_SPI1_Init(void)
   hspi1.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
   hspi1.Init.CRCPolynomial = 7;
   hspi1.Init.CRCLength = SPI_CRC_LENGTH_DATASIZE;
-  hspi1.Init.NSSPMode = SPI_NSS_PULSE_DISABLE; // ?
+  hspi1.Init.NSSPMode = SPI_NSS_PULSE_DISABLE;
   if (HAL_SPI_Init(&hspi1) != HAL_OK)
   {
     Error_Handler();
@@ -551,6 +599,51 @@ static void MX_TIM2_Init(void)
 }
 
 /**
+  * @brief TIM3 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM3_Init(void)
+{
+
+  /* USER CODE BEGIN TIM3_Init 0 */
+
+  /* USER CODE END TIM3_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  /* USER CODE BEGIN TIM3_Init 1 */
+
+  /* USER CODE END TIM3_Init 1 */
+  htim3.Instance = TIM3;
+  htim3.Init.Prescaler = 15;
+  htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim3.Init.Period = 65535;
+  htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim3) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim3, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim3, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM3_Init 2 */
+
+  /* USER CODE END TIM3_Init 2 */
+
+}
+
+/**
   * Enable DMA controller clock
   */
 static void MX_DMA_Init(void)
@@ -660,6 +753,40 @@ void HAL_TIM_PWM_PulseFinishedCallback(TIM_HandleTypeDef *htim)
     HAL_TIM_PWM_Stop_DMA(&htim2, TIM_CHANNEL_1);
     dma_waiting_ws2812 = 0;
   }
+}
+
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+  if(htim->Instance == TIM1 && htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1) {
+    // PWM burst finished
+    HAL_TIM_PWM_Stop(htim, TIM_CHANNEL_1);
+  }
+}
+
+uint32_t HAL_GetTickUS(void) {
+  uint32_t tick_now = TIM3->CNT;
+  if (tick_now < tick_raw)
+    overflow_count++;
+
+  tick_raw = tick_now;
+  tick_us = tick_raw + overflow_count * 65536;
+  if(tick_us > TICK_US_RESET_THRESHOLD) {
+    tick_ks++;
+    overflow_count = 0;
+  }
+
+  return tick_us; // get the current value of TIM3 counter
+}
+
+void TimeMeasureStart(void) {
+  tick_us_start = HAL_GetTickUS();
+}
+
+uint32_t TimeMeasureStop(void) {
+  int32_t time_diff = HAL_GetTickUS() - tick_us_start;
+  if(time_diff < 0)
+    time_diff += TICK_US_RESET_THRESHOLD;
+  return time_diff;
 }
 /* USER CODE END 4 */
 

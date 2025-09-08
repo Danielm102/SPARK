@@ -365,7 +365,7 @@ void Stepper_Init() {
     Stepper_setTorque(DRV_TRQ_08_16);
     Stepper_setDecay(DRV_DECAY_SMART_TUNE_RIPPLE_CONTROL);
     Stepper_setTOFF(DRV_TOFF_16_US);
-    Stepper_setMicrostep(DRV_STEP_1_4);
+    Stepper_setMicrostep(DRV_STEP_SIZE);
     Stepper_configInputMode(DRV_INPUT_MODE_PIN);
     Stepper_setTemperatureFault(DRV_OTW_NO_REPORT_NFAULT, DRV_OTS_MODE_LATCHED_FAULT);
     Stepper_setOvercurrentFault(DRV_OCP_MODE_LATCHED_FAULT);
@@ -429,7 +429,14 @@ void TIM1_Start_Burst(TIM_HandleTypeDef *htim, uint32_t channel, uint32_t pulses
 
     // start PWM (will generate pulses = RCR+1)
     HAL_TIM_PWM_Start(htim, channel);
+}
 
-    // If using advanced timer (TIM1) you may need to enable MOE:
-    __HAL_TIM_MOE_ENABLE(htim); // usually required for TIM1/TIM8
+void Stepper_setSpeed(float revolutions_per_second) {
+    Stepper_Enable();   // make sure stepper is enabled
+    if(revolutions_per_second == 0) {
+        HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_1);
+    } else {
+        __HAL_TIM_SET_PRESCALER(&htim1, (uint16_t)round(TIM1_BASE_FREQ/STEPPER_STEPS_PER_REVOLUTION/DRV_STEP_DIV/TIM1_ARR/revolutions_per_second));
+        HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
+    }
 }

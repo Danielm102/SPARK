@@ -4,7 +4,13 @@
 #include "main.h"
 #include "stdbool.h"
 
-#define STEPPER_STEP_TIME 500   // Time in us for one step
+#define STEPPER_STEP_TIME 500   // Time in us for one step (irrelevant)
+
+#define TIM1_BASE_FREQ 16000000
+#define TIM1_ARR 10
+#define DRV_STEP_SIZE DRV_STEP_1_32
+#define DRV_STEP_DIV 32
+#define STEPPER_STEPS_PER_REVOLUTION 200
 
 #define CURRENT_SCALE_KV 1.32
 
@@ -94,6 +100,9 @@ void Stepper_movetoPos(float pos_cmd);
 
 // Error handling
 void Stepper_FaultHandler();
+
+// testing
+void Stepper_setSpeed(float revolutions_per_second);
 
 #define Stepper_Select()    HAL_GPIO_WritePin(DRV_CS_GPIO_Port, DRV_CS_Pin, 0)
 #define Stepper_Deselect()  HAL_GPIO_WritePin(DRV_CS_GPIO_Port, DRV_CS_Pin, 1)

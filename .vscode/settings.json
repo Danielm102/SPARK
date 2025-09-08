@@ -5,7 +5,8 @@
         "Stepper.h": "c",
         "ws2812.h": "c",
         "voltagereader.h": "c",
-        "cmath": "c"
+        "cmath": "c",
+        "status.h": "c"
     },
     "C_Cpp.errorSquiggles": "enabled",
 }
