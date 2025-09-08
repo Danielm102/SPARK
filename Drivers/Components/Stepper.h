@@ -4,8 +4,7 @@
 #include "main.h"
 #include "stdbool.h"
 
-#define MAX_STEPPER_STEPS 400   // Maximum number of steps to move in one call
-#define STEPPER_STEP_TIME 2000   // Time in us for one step
+#define STEPPER_STEP_TIME 500   // Time in us for one step
 
 #define CURRENT_SCALE_KV 1.32
 
@@ -57,9 +56,6 @@ extern DRV8434S_diag2_t DRV_diag2;
 extern uint8_t DRV_status_byte;
 
 extern float pos_Stepper;
-extern uint16_t pwmData[MAX_STEPPER_STEPS];
-
-extern volatile uint8_t dma_waiting_stepper;
 
 // DRV8434S SPI functions
 uint8_t Stepper_write_reg(uint8_t address, uint8_t data);
@@ -93,7 +89,7 @@ void Stepper_getREV_ID(uint8_t *id);
 // Stepper motor control functions
 void Stepper_Init();
 void Stepper_setDirection(stepper_dir_t dir);
-int16_t Stepper_moveSteps(int16_t steps);
+void Stepper_moveSteps(int16_t steps);
 void Stepper_movetoPos(float pos_cmd);
 
 // Error handling
@@ -128,8 +124,8 @@ void Stepper_FaultHandler();
 #define DRV_CTRL9_REG 0x0B          // Type: R
 
 // CTRL1 bitfields
-#define DRV_OL_RELEASE_AFTER_CLEAR 0b0  // default
-#define DRV_OL_RELEASE_IMMEDIATELY 0b1
+#define DRV_OL_RELEASE_AFTER_CLEAR 0    // default
+#define DRV_OL_RELEASE_IMMEDIATELY 1
 
 #define DRV_TRQ_16_16   0b0000  // 100% | default
 #define DRV_TRQ_15_16   0b0001  // 93.75%
@@ -156,7 +152,7 @@ void Stepper_FaultHandler();
 #define DRV_DECAY_IMI30_DMI30               0b100 // increasing & decreasing MIXED 30%
 #define DRV_DECAY_IMI60_DMI60               0b101 // increasing & decreasing MIXED 60%
 #define DRV_DECAY_SMART_TUNE_DYNAMIC_DECAY  0b110 // smart tune dynamic decay
-#define DRV_DECAY_SMART_TUNE_RIPPLE_CONTROL 0b111 // smart tune ripple control
+#define DRV_DECAY_SMART_TUNE_RIPPLE_CONTROL 0b111 // smart tune ripple control | default
 
 #define DRV_TOFF_07_US 0b00
 #define DRV_TOFF_16_US 0b01 // default
@@ -164,7 +160,7 @@ void Stepper_FaultHandler();
 #define DRV_TOFF_32_US 0b11
 
 // CTRL3 bitfields
-#define DRV_STEP_FULL_100   0b0000  // 100% current full-step
+#define DRV_STEP_FULL_100   0b0000  // 100% current full-step | default
 #define DRV_STEP_FULL_71    0b0001  // 71 % current full-step
 #define DRV_STEP_1_2_NC     0b0010  // non-circular 1/2 step
 #define DRV_STEP_1_2        0b0011  // 1/2 step
@@ -176,33 +172,30 @@ void Stepper_FaultHandler();
 #define DRV_STEP_1_128      0b1001  // 1/128 step
 #define DRV_STEP_1_256      0b1010  // 1/256 step
 
-#define DRV_INPUT_MODE_PIN  0b00    // outputs follow input pins
+#define DRV_INPUT_MODE_PIN  0b00    // outputs follow input pins | default
 #define DRV_INPUT_MODE_SPI  0b11    // outputs follow spi registers
 
 // CTRL4 bitfields
-#define DRV_OTW_NO_REPORT_NFAULT    0
+#define DRV_OTW_NO_REPORT_NFAULT    0   // default
 #define DRV_OTW_REPORT_ON_NFAULT    1
-#define DRV_OTS_MODE_LATCHED_FAULT  0
+#define DRV_OTS_MODE_LATCHED_FAULT  0   // default
 #define DRV_OTS_MODE_AUTO_RETRY     1
 
-#define DRV_OCP_MODE_LATCHED_FAULT  0
+#define DRV_OCP_MODE_LATCHED_FAULT  0   // default
 #define DRV_OCP_MODE_AUTO_RETRY     1
 
+#define DRV_UNLOCK_REGISTERS    0b011   // default
 #define DRV_LOCK_REGISTERS      0b110
-#define DRV_UNLOCK_REGISTERS    0b011
 
 // CTRL5 bitfields
-#define DRV_STALL_DETECTION_OFF     0
+#define DRV_STALL_DETECTION_OFF     0   // default
 #define DRV_STALL_DETECTION_ON      1
 #define DRV_STALL_NO_REPORT_NFAULT  0
-#define DRV_STALL_REPORT_ON_NFAULT  1
+#define DRV_STALL_REPORT_ON_NFAULT  1   // default
 
 //CTRL7 bitfields
 #define DRV_TRQ_SCALE_NONE  0   // no torque count scaling is applied | default
 #define DRV_TRQ_SCALE_MLT8  1   // torque count is scaled up by a factor of 8
-
-#define DRV_SPREAD_SPECTRUM_OFF 0   
-#define DRV_SPREAD_SPECTRUM_ON  1       // default
 
 #define DRV_RC_RIPPLE_1_PERCENT 0b00    // default
 #define DRV_RC_RIPPLE_2_PERCENT 0b01

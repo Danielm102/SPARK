@@ -9,7 +9,6 @@ DRV8434S_diag2_t DRV_diag2;
 uint8_t DRV_status_byte;    // holds SPI response status bits. 0xC0 = no faults
 
 float pos_Stepper = 0;
-uint16_t pwmData[MAX_STEPPER_STEPS];
 
 /* --------------------------------- DRV8434S SPI functions --------------------------------- */
 
@@ -76,6 +75,7 @@ void Stepper_getFullStatus() {
     DRV_diag2.OTW        = 0x01 & (data >> 6);
 }
 
+// default: DRV_OL_RELEASE_AFTER_CLEAR
 void Stepper_setOpenLoadMode(bool mode) {
     uint8_t data;
     if(Stepper_read_reg(DRV_CTRL1_REG, &data) != DRV_STATUS_BYTE_OK) 
@@ -87,6 +87,7 @@ void Stepper_setOpenLoadMode(bool mode) {
         Stepper_FaultHandler();
 }
 
+// default: DRV_TRQ_16_16
 void Stepper_setTorque(uint8_t torque) {
     uint8_t data;
     if(Stepper_read_reg(DRV_CTRL1_REG, &data) != DRV_STATUS_BYTE_OK) 
@@ -98,6 +99,7 @@ void Stepper_setTorque(uint8_t torque) {
         Stepper_FaultHandler();
 }
 
+// default: DRV_DECAY_SMART_TUNE_RIPPLE_CONTROL
 void Stepper_setDecay(uint8_t decay) {
     uint8_t data = 0;
     if(Stepper_read_reg(DRV_CTRL2_REG, &data) != DRV_STATUS_BYTE_OK) 
@@ -109,6 +111,7 @@ void Stepper_setDecay(uint8_t decay) {
         Stepper_FaultHandler();
 }
 
+// automatically adjusted for smart tune ripple control | default: DRV_TOFF_16_US
 void Stepper_setTOFF(uint8_t t_off) {
     uint8_t data = 0;
     if(Stepper_read_reg(DRV_CTRL2_REG, &data) != DRV_STATUS_BYTE_OK) 
@@ -140,6 +143,7 @@ void Stepper_disableControl() {
         Stepper_FaultHandler();
 }
 
+// default: DRV_STEP_FULL_100
 void Stepper_setMicrostep(uint8_t microstep_mode) {
     uint8_t data = 0;
     if(Stepper_read_reg(DRV_CTRL3_REG, &data) != DRV_STATUS_BYTE_OK) 
@@ -151,6 +155,7 @@ void Stepper_setMicrostep(uint8_t microstep_mode) {
         Stepper_FaultHandler();
 }
 
+// default: DRV_INPUT_MODE_PIN
 void Stepper_configInputMode(uint8_t input_mode) {
     uint8_t data = 0;
     if(Stepper_read_reg(DRV_CTRL3_REG, &data) != DRV_STATUS_BYTE_OK) 
@@ -162,6 +167,7 @@ void Stepper_configInputMode(uint8_t input_mode) {
         Stepper_FaultHandler();
 }
 
+// default: 0 (reverse)
 void Stepper_setDIR_SPI(stepper_dir_t dir) {
     uint8_t data = 0;
     if(Stepper_read_reg(DRV_CTRL3_REG, &data) != DRV_STATUS_BYTE_OK) 
@@ -184,6 +190,7 @@ void Stepper_setSTEP_SPI(bool step) {
         Stepper_FaultHandler();
 }
 
+// default: DRV_OTW_NO_REPORT_NFAULT, DRV_OTS_MODE_LATCHED_FAULT
 void Stepper_setTemperatureFault(bool OTW_report_nFAULT, bool OTS_auto_recovery) {
     uint8_t data = 0;
     if(Stepper_read_reg(DRV_CTRL4_REG, &data) != DRV_STATUS_BYTE_OK) 
@@ -195,6 +202,7 @@ void Stepper_setTemperatureFault(bool OTW_report_nFAULT, bool OTS_auto_recovery)
         Stepper_FaultHandler();
 }
 
+// default: DRV_OCP_MODE_LATCHED_FAULT
 void Stepper_setOvercurrentFault(bool OC_auto_retry) {
     uint8_t data = 0;
     if(Stepper_read_reg(DRV_CTRL4_REG, &data) != DRV_STATUS_BYTE_OK) 
@@ -206,6 +214,7 @@ void Stepper_setOvercurrentFault(bool OC_auto_retry) {
         Stepper_FaultHandler();
 }
 
+// default: DISABLE
 void Stepper_OpenLoadDetection(bool OL_en) {
     uint8_t data = 0;
     if(Stepper_read_reg(DRV_CTRL4_REG, &data) != DRV_STATUS_BYTE_OK) 
@@ -249,12 +258,13 @@ void Stepper_clearFaults() {
         Stepper_FaultHandler();
 }
 
+// default: DRV_STALL_DETECTION_OFF, DRV_STALL_REPORT_ON_NFAULT
 void Stepper_setStallDetection(bool STL_en, bool STL_report) {
     uint8_t data = 0;
     if(Stepper_read_reg(DRV_CTRL5_REG, &data) != DRV_STATUS_BYTE_OK) 
         Stepper_FaultHandler();
 
-    data &= 0xFC;
+    data &= 0xE7;
     data |= (STL_report << 3) | (STL_en << 4);
     if(Stepper_write_reg(DRV_CTRL5_REG, data) != DRV_STATUS_BYTE_OK)
         Stepper_FaultHandler();
@@ -270,7 +280,7 @@ void Stepper_learnStallCount() {
         Stepper_FaultHandler();
 }
 
-// 0 - 4095
+// 0 - 4095 | default: 3
 void Stepper_setStallThreshold(uint16_t count) {
     uint8_t data = 0;
     data = (uint8_t)count;
@@ -288,6 +298,7 @@ void Stepper_setStallThreshold(uint16_t count) {
     }
 }
 
+// default: DRV_TRQ_SCALE_NONE
 void Stepper_scaleTorqueCount(bool TRQ_scale) {
     uint8_t data = 0;
     if(Stepper_read_reg(DRV_CTRL7_REG, &data) != DRV_STATUS_BYTE_OK) 
@@ -299,6 +310,7 @@ void Stepper_scaleTorqueCount(bool TRQ_scale) {
         Stepper_FaultHandler();
 }
 
+// default: ENABLE
 void Stepper_setSpreadSpectrum(bool SSC_en) {
     uint8_t data = 0;
     if(Stepper_read_reg(DRV_CTRL7_REG, &data) != DRV_STATUS_BYTE_OK) 
@@ -310,6 +322,7 @@ void Stepper_setSpreadSpectrum(bool SSC_en) {
         Stepper_FaultHandler();
 }
 
+// default: DRV_RC_RIPPLE_1_PERCENT
 void Stepper_setRCRipple(uint8_t ripple) {
     uint8_t data = 0;
     if(Stepper_read_reg(DRV_CTRL7_REG, &data) != DRV_STATUS_BYTE_OK) 
@@ -344,31 +357,35 @@ void Stepper_getREV_ID(uint8_t *id) {
 /* ----------------------------- Stepper Motor Control Functions ---------------------------- */
 
 void Stepper_Init() {
-    for (int i = 0; i < MAX_STEPPER_STEPS; i++) {
-        pwmData[i] = 8; // Initialize the PWM data array
-    }
+    Stepper_Wakeup();
+
+    HAL_Delay(5);
+
+    Stepper_setOpenLoadMode(DRV_OL_RELEASE_AFTER_CLEAR);
+    Stepper_setTorque(DRV_TRQ_08_16);
+    Stepper_setDecay(DRV_DECAY_SMART_TUNE_RIPPLE_CONTROL);
+    Stepper_setTOFF(DRV_TOFF_16_US);
+    Stepper_setMicrostep(DRV_STEP_1_4);
+    Stepper_configInputMode(DRV_INPUT_MODE_PIN);
+    Stepper_setTemperatureFault(DRV_OTW_NO_REPORT_NFAULT, DRV_OTS_MODE_LATCHED_FAULT);
+    Stepper_setOvercurrentFault(DRV_OCP_MODE_LATCHED_FAULT);
+    Stepper_OpenLoadDetection(DISABLE);
+    Stepper_setStallDetection(DRV_STALL_DETECTION_OFF, DRV_STALL_REPORT_ON_NFAULT);
+    Stepper_setStallThreshold(3);
+    Stepper_scaleTorqueCount(DRV_TRQ_SCALE_NONE);
+    Stepper_setSpreadSpectrum(ENABLE);
+    Stepper_setRCRipple(DRV_RC_RIPPLE_1_PERCENT);
+
+    Stepper_enableControl();
 }
 
 void Stepper_setDirection(stepper_dir_t dir) {
     HAL_GPIO_WritePin(DRV_DIR_GPIO_Port, DRV_DIR_Pin, dir);
 }
 
-int16_t Stepper_moveSteps(int16_t steps) {
-    if (dma_waiting_stepper)
-        return steps;   // If DMA is already waiting, do not start a new transfer
-
-    if (steps == 0)
-        return 0;       // No steps to move
-
+void Stepper_moveSteps(int16_t steps) {
     Stepper_Enable();   // make sure stepper is enabled
     int16_t steps_cmd;
-
-    if (steps > MAX_STEPPER_STEPS)
-        steps_cmd = MAX_STEPPER_STEPS;  // Limit to maximum steps
-    else if (steps < -MAX_STEPPER_STEPS)
-        steps_cmd = -MAX_STEPPER_STEPS; // Limit to minimum steps
-    
-    
 
     // Set direction based on sign of steps
     if (steps > 0) {
@@ -379,10 +396,7 @@ int16_t Stepper_moveSteps(int16_t steps) {
         steps_cmd = -steps;         // Make step count positive
     }
 
-	HAL_TIM_PWM_Start_DMA(&htim1, TIM_CHANNEL_1, (uint32_t *)pwmData, steps_cmd);
-    dma_waiting_stepper = 1;
-
-    return steps - steps_cmd; // Return remaining steps
+    TIM1_Start_Burst(&htim1, TIM_CHANNEL_1, steps);
 }
 
 void Stepper_movetoPos(float pos_cmd) {
@@ -392,5 +406,30 @@ void Stepper_movetoPos(float pos_cmd) {
 }
 
 void Stepper_FaultHandler() {
+    Stepper_getFullStatus();
+}
 
+void TIM1_Start_Burst(TIM_HandleTypeDef *htim, uint32_t channel, uint32_t pulses) {
+    if (pulses == 0) return;
+
+    // Stop PWM output
+    HAL_TIM_PWM_Stop(htim, channel);
+
+    // reset counter to start clean
+    __HAL_TIM_SET_COUNTER(htim, 0);
+
+    // set repetition counter (hardware register)
+    htim->Instance->RCR = (uint32_t)(pulses - 1U);
+
+    // Force registers (ARR/CCR/RCR) to be loaded immediately
+    htim1.Instance->EGR = TIM_EGR_UG;
+
+    // Enable One-Pulse Mode so the timer stops automatically
+    htim1.Instance->CR1 |= TIM_CR1_OPM;
+
+    // start PWM (will generate pulses = RCR+1)
+    HAL_TIM_PWM_Start(htim, channel);
+
+    // If using advanced timer (TIM1) you may need to enable MOE:
+    __HAL_TIM_MOE_ENABLE(htim); // usually required for TIM1/TIM8
 }

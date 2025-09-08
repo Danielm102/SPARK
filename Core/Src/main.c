@@ -55,7 +55,6 @@ DMA_HandleTypeDef hdma_tim1_ch1;
 DMA_HandleTypeDef hdma_tim2_ch1;
 
 /* USER CODE BEGIN PV */
-volatile uint8_t dma_waiting_stepper;
 volatile uint8_t dma_waiting_ws2812;
 
 float voltage_driver;
@@ -130,24 +129,10 @@ int main(void)
 
   Stepper_Init();
 
-  Stepper_Wakeup();
-
-  HAL_Delay(10);
-
-  Stepper_Enable();
-  
-  Stepper_setTorque(DRV_TRQ_08_16);
-  Stepper_enableControl();
-  Stepper_setMicrostep(DRV_STEP_FULL_100);
-
   Stepper_moveSteps(200);
-  while(dma_waiting_stepper);
-  HAL_Delay(50);
-  Stepper_moveSteps(-200);
+  //HAL_Delay(50);
+  //Stepper_moveSteps(-1);
 
-  
-
-  //Stepper_Sleep();
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -160,7 +145,6 @@ int main(void)
     temperature_NTC1 = readTemperature(ADC_CHANNEL_0);
     temperature_NTC2 = readTemperature(ADC_CHANNEL_1);
     voltage_driver = readVoltage(ADC_CHANNEL_2) * 12.2f / 2.2f;
-    Stepper_getFullStatus();
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
@@ -483,7 +467,7 @@ static void MX_TIM1_Init(void)
     Error_Handler();
   }
   sConfigOC.OCMode = TIM_OCMODE_PWM1;
-  sConfigOC.Pulse = 0;
+  sConfigOC.Pulse = 8;
   sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
   sConfigOC.OCNPolarity = TIM_OCNPOLARITY_HIGH;
   sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
@@ -670,7 +654,6 @@ void HAL_TIM_PWM_PulseFinishedCallback(TIM_HandleTypeDef *htim)
 {
   if(htim->Instance == TIM1 && htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1) {
     HAL_TIM_PWM_Stop_DMA(&htim1, TIM_CHANNEL_1);
-    dma_waiting_stepper = 0;
     Stepper_Disable();
   }
   if(htim->Instance == TIM2 && htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1) {
