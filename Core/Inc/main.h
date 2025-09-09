@@ -32,6 +32,8 @@ extern "C" {
 /* USER CODE BEGIN Includes */
 #include "ws2812.h"
 #include "Stepper.h"
+#include "AS5600.h"
+
 #include "stdbool.h"
 #include "status.h"
 #include "VoltageReader.h"
