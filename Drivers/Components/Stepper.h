@@ -6,15 +6,19 @@
 
 #define STEPPER_STEP_TIME 500   // Time in us for one step (irrelevant)
 
-#define TIM1_BASE_FREQ 16000000
-#define TIM1_ARR 10
-#define DRV_STEP_SIZE DRV_STEP_1_32
-#define DRV_STEP_DIV 32
-#define STEPPER_STEPS_PER_REVOLUTION 200
+#define TIM1_BASE_FREQ  16000000
+#define TIM1_ARR        10
+
+#define DRV_STEP_SIZE DRV_STEP_1_64
+#define DRV_STEP_DIV                    64
+#define STEPPER_STEPS_PER_REVOLUTION    200
+#define STEPPER_MAX_ACCELERATION        50     // revolutions/s²
+#define STEPPER_MAX_SPEED               2      // revolutions/s
+#define STEPPER_MAX_POSITION_ERROR      0.05   // revolutions
 
 #define CURRENT_SCALE_KV 1.32
 
-#define rod_inclination 8
+#define rod_inclination
 
 typedef enum {
     reverse = 0,
@@ -61,7 +65,9 @@ extern DRV8434S_diag2_t DRV_diag2;
 
 extern uint8_t DRV_status_byte;
 
-extern float pos_Stepper;
+extern struct Stepper_state;
+
+extern float mag_angle;
 
 // DRV8434S SPI functions
 uint8_t Stepper_write_reg(uint8_t address, uint8_t data);
@@ -103,6 +109,12 @@ void Stepper_FaultHandler();
 
 // testing
 void Stepper_setSpeed(float revolutions_per_second);
+void Stepper_updateSpeed(float freq, float pos);
+
+void Stepper_setTargetDeg(float degrees);
+void Stepper_moveDeg(float degrees);
+
+float fconstrain(float variable, float min, float max);
 
 #define Stepper_Select()    HAL_GPIO_WritePin(DRV_CS_GPIO_Port, DRV_CS_Pin, 0)
 #define Stepper_Deselect()  HAL_GPIO_WritePin(DRV_CS_GPIO_Port, DRV_CS_Pin, 1)

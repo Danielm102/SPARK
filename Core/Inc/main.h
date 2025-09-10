@@ -35,6 +35,8 @@ extern "C" {
 #include "AS5600.h"
 
 #include "stdbool.h"
+#include "math.h"
+
 #include "status.h"
 #include "VoltageReader.h"
 /* USER CODE END Includes */
@@ -64,6 +66,7 @@ void RunOnce();
 void Loop_1000Hz();
 void Loop_100Hz();
 void Loop_10Hz();
+void Stepper_Zero();
 
 uint32_t HAL_GetTickUS(void);
 void TimeMeasureStart(void);

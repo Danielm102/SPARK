@@ -7,8 +7,16 @@ DRV8434S_diag1_t DRV_diag1;
 DRV8434S_diag2_t DRV_diag2;
 
 uint8_t DRV_status_byte;    // holds SPI response status bits. 0xC0 = no faults
+float speed_setpoint;
 
-float pos_Stepper = 0;
+struct {
+    uint8_t state;
+    float pos_prev;
+    float pos_cmd;
+    float time_prev;
+    float time_cmd;
+    float speed;
+} stepper;
 
 /* --------------------------------- DRV8434S SPI functions --------------------------------- */
 
@@ -359,6 +367,8 @@ void Stepper_getREV_ID(uint8_t *id) {
 void Stepper_Init() {
     Stepper_Wakeup();
 
+    stepper.state = 0;
+
     HAL_Delay(5);
 
     Stepper_setOpenLoadMode(DRV_OL_RELEASE_AFTER_CLEAR);
@@ -372,7 +382,7 @@ void Stepper_Init() {
     Stepper_OpenLoadDetection(DISABLE);
     Stepper_setStallDetection(DRV_STALL_DETECTION_OFF, DRV_STALL_REPORT_ON_NFAULT);
     Stepper_setStallThreshold(3);
-    Stepper_scaleTorqueCount(DRV_TRQ_SCALE_NONE);
+    Stepper_scaleTorqueCount(DRV_TRQ_SCALE_MLT8);
     Stepper_setSpreadSpectrum(ENABLE);
     Stepper_setRCRipple(DRV_RC_RIPPLE_1_PERCENT);
 
@@ -383,60 +393,74 @@ void Stepper_setDirection(stepper_dir_t dir) {
     HAL_GPIO_WritePin(DRV_DIR_GPIO_Port, DRV_DIR_Pin, dir);
 }
 
-void Stepper_moveSteps(int16_t steps) {
-    Stepper_Enable();   // make sure stepper is enabled
-    int16_t steps_cmd;
-
-    // Set direction based on sign of steps
-    if (steps > 0) {
-        Stepper_setDirection(forward);
-        steps_cmd = steps;          // Use positive step count
-    } else {
-        Stepper_setDirection(reverse);
-        steps_cmd = -steps;         // Make step count positive
-    }
-
-    TIM1_Start_Burst(&htim1, TIM_CHANNEL_1, steps);
-}
-
-void Stepper_movetoPos(float pos_cmd) {
+/*void Stepper_movetoPos(float pos_cmd) {
     int steps = 200. * (pos_Stepper - pos_cmd) / rod_inclination; // calculate step count
     Stepper_moveSteps(steps); // move
     pos_Stepper = pos_cmd; // update position
-}
+}*/
 
 void Stepper_FaultHandler() {
     Stepper_getFullStatus();
-}
-
-void TIM1_Start_Burst(TIM_HandleTypeDef *htim, uint32_t channel, uint32_t pulses) {
-    if (pulses == 0) return;
-
-    // Stop PWM output
-    HAL_TIM_PWM_Stop(htim, channel);
-
-    // reset counter to start clean
-    __HAL_TIM_SET_COUNTER(htim, 0);
-
-    // set repetition counter (hardware register)
-    htim->Instance->RCR = (uint32_t)(pulses - 1U);
-
-    // Force registers (ARR/CCR/RCR) to be loaded immediately
-    htim1.Instance->EGR = TIM_EGR_UG;
-
-    // Enable One-Pulse Mode so the timer stops automatically
-    htim1.Instance->CR1 |= TIM_CR1_OPM;
-
-    // start PWM (will generate pulses = RCR+1)
-    HAL_TIM_PWM_Start(htim, channel);
 }
 
 void Stepper_setSpeed(float revolutions_per_second) {
     Stepper_Enable();   // make sure stepper is enabled
     if(revolutions_per_second == 0) {
         HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_1);
+        return;
+    } else if(revolutions_per_second < 0) {
+        Stepper_setDirection(reverse);
+        revolutions_per_second = -revolutions_per_second;
+    } else if(revolutions_per_second > 0) {
+        Stepper_setDirection(forward);
+    }
+
+    int prescaler = round((float)TIM1_BASE_FREQ/revolutions_per_second/STEPPER_STEPS_PER_REVOLUTION/DRV_STEP_DIV/TIM1_ARR);
+
+    if(prescaler > 65535) {
+        int period = round(prescaler/65536.f + 0.5) * TIM1_ARR;
+        __HAL_TIM_SET_AUTORELOAD(&htim1, period - 1);
+        __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, period / 2);
+
+        prescaler = round((float)TIM1_BASE_FREQ/revolutions_per_second/STEPPER_STEPS_PER_REVOLUTION/DRV_STEP_DIV/period);
+    } else if(__HAL_TIM_GET_AUTORELOAD(&htim1) != 9) {
+        __HAL_TIM_SET_AUTORELOAD(&htim1, TIM1_ARR - 1);
+        __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, TIM1_ARR / 2);
+    }
+    
+    __HAL_TIM_SET_PRESCALER(&htim1, prescaler - 1);
+    
+    HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
+}
+
+void Stepper_setTargetDeg(float degrees) {
+    stepper.pos_cmd = degrees;
+}
+
+void Stepper_moveDeg(float degrees) {
+    stepper.pos_cmd += degrees;
+}
+
+void Stepper_updateSpeed(float freq, float pos) {
+    float dt = 1.f / freq;
+    stepper.pos_prev = pos;
+
+    float deviation = pos - stepper.pos_cmd;
+    deviation *= 0.1;
+    stepper.speed = fconstrain(deviation, -STEPPER_MAX_SPEED, STEPPER_MAX_SPEED);
+
+    if(deviation < STEPPER_MAX_POSITION_ERROR && deviation > STEPPER_MAX_POSITION_ERROR)
+        stepper.speed = 0;
+
+    Stepper_setSpeed(stepper.speed);
+}
+
+float fconstrain(float variable, float min, float max) {
+    if(variable > max) {
+        return max;
+    } else if(variable < min) {
+        return min;
     } else {
-        __HAL_TIM_SET_PRESCALER(&htim1, (uint16_t)round(TIM1_BASE_FREQ/STEPPER_STEPS_PER_REVOLUTION/DRV_STEP_DIV/TIM1_ARR/revolutions_per_second));
-        HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
+        return variable;
     }
 }

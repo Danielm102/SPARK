@@ -62,6 +62,7 @@ uint32_t tick_us = 0;
 uint32_t tick_raw = 0;
 uint32_t tick_us_start = 0;
 uint16_t overflow_count = 0;
+uint32_t timestamp = 0;
 
 uint32_t dt_1000Hz;
 uint32_t dt_100Hz;
@@ -80,8 +81,9 @@ float voltage_driver;
 float temperature_NTC1;
 float temperature_NTC2;
 uint16_t Stepper_TRQ;
+uint8_t Stepper_stall_count;
 
-float mag_angle_raw = 0;
+float stepper_neutral_angle = 0;
 float mag_angle = 0;
 
 uint8_t SPARK_status = 0;
@@ -185,18 +187,32 @@ void RunOnce()
 {
   SPARK_status = 1;
   Stepper_Init();
+  AS5600_readAngleRaw(&mag_angle);
+  Stepper_setTargetDeg(mag_angle);
+
+  Stepper_setSpeed(0.1);
+  Stepper_setSpeed(-0.1);
+
+  Stepper_setStallDetection(DRV_STALL_DETECTION_ON, DRV_STALL_REPORT_ON_NFAULT);
+
+  timestamp = uwTick;
 }
 
 void Loop_1000Hz()
 {
-  
+
 }
 
 void Loop_100Hz()
 {
-  ShowStatus(RGB_LED, SPARK_status, 1, 100);
-  AS5600_readAngleRaw(&mag_angle_raw);
   AS5600_readAngle(&mag_angle);
+  Stepper_getFullStatus();
+  if((1 <= SPARK_status) && (SPARK_status <= 4)) {
+    Stepper_Zero();
+  } else {
+    Stepper_updateSpeed(100, mag_angle);
+  }
+  ShowStatus(RGB_LED, SPARK_status, 1, 100);
 }
 
 void Loop_10Hz()
@@ -205,6 +221,46 @@ void Loop_10Hz()
   temperature_NTC2 = readTemperature(ADC_CHANNEL_1);
   voltage_driver = readVoltage(ADC_CHANNEL_2) * 12.2f / 2.2f;
   AS5600_getStatus(&AS5600_status);
+}
+
+void Stepper_Zero() {
+  Stepper_getTRQCount(&Stepper_TRQ);
+  if((SPARK_status == 1) && (Stepper_TRQ <= 250) && (Stepper_TRQ >= 200)) {
+    Stepper_stall_count++;
+    SPARK_status = 2;
+    timestamp = uwTick;
+    Stepper_setTargetDeg(mag_angle);
+
+  } else if((SPARK_status == 3) && (Stepper_TRQ <= 230) && (Stepper_TRQ >= 180)) {
+    Stepper_stall_count++;
+    SPARK_status = 4;
+    timestamp = uwTick;
+    stepper_neutral_angle = mag_angle;
+  }
+  
+  switch(SPARK_status) {
+    case 1: // move in slowly
+      Stepper_setSpeed(-0.1);
+      break;
+    case 2: // move out 10°
+      Stepper_moveDeg(-0.5);
+      Stepper_updateSpeed(100, mag_angle);
+      break;
+    case 3:
+      break;
+    case 4:
+      Stepper_setSpeed(0);
+      break;
+  }
+
+  if((SPARK_status == 2) && (uwTick - timestamp > 1000)) {
+    SPARK_status = 3;
+    Stepper_setSpeed(-0.05);
+    HAL_Delay(5);
+  } else if((SPARK_status == 4) && (uwTick - timestamp > 1000)) {
+    SPARK_status = 5;
+    Stepper_moveDeg(-480);
+  }
 }
 
 /**
@@ -499,7 +555,7 @@ static void MX_TIM1_Init(void)
   htim1.Instance = TIM1;
   htim1.Init.Prescaler = STEPPER_STEP_TIME - 1;
   htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim1.Init.Period = 15;
+  htim1.Init.Period = TIM1_ARR - 1;
   htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim1.Init.RepetitionCounter = 0;
   htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
@@ -524,7 +580,7 @@ static void MX_TIM1_Init(void)
     Error_Handler();
   }
   sConfigOC.OCMode = TIM_OCMODE_PWM1;
-  sConfigOC.Pulse = 8;
+  sConfigOC.Pulse = TIM1_ARR / 2;
   sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
   sConfigOC.OCNPolarity = TIM_OCNPOLARITY_HIGH;
   sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;

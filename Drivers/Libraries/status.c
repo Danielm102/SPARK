@@ -10,8 +10,8 @@ void ShowStatus(device_handle device, int8_t status, float freq_cycle, float fre
     else LED_blink = !LED_blink;
 
     if(device == RGB_LED) {
-
-        switch(status) {
+        SetLED_pulse(COLOR_BLUE);
+        /*switch(status) {
             case -4: // Selftest, error
                 SetLED_slide(COLOR_RED, COLOR_ORANGE);
                 break;
@@ -42,7 +42,7 @@ void ShowStatus(device_handle device, int8_t status, float freq_cycle, float fre
             case 5: // Move complete
                 SetLED_color(COLOR_CYAN);
                 break;
-        }
+        }*/
     }
     if(device == STATUS_LED_1) {
         
