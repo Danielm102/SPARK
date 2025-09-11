@@ -9,11 +9,12 @@
 #define TIM1_BASE_FREQ  16000000
 #define TIM1_ARR        10
 
-#define DRV_STEP_SIZE DRV_STEP_1_64
-#define DRV_STEP_DIV                    64
+#define DRV_STEP_SIZE DRV_STEP_1_256
+#define DRV_STEP_DIV                    256
 #define STEPPER_STEPS_PER_REVOLUTION    200
-#define STEPPER_MAX_ACCELERATION        50     // revolutions/s²
-#define STEPPER_MAX_SPEED               2      // revolutions/s
+#define STEPPER_MAX_ACCELERATION        20     // revolutions/s²
+#define STEPPER_MAX_SPEED               5      // revolutions/s
+#define STEPPER_MIN_SPEED               0.0001 // revolutions/s
 #define STEPPER_MAX_POSITION_ERROR      0.05   // revolutions
 
 #define CURRENT_SCALE_KV 1.32
@@ -24,6 +25,11 @@ typedef enum {
     reverse = 0,
     forward = 1
 } stepper_dir_t;
+
+typedef enum {
+    target_pos,
+    target_speed
+} stepper_mode_t;
 
 typedef struct {
     bool FAULT;
@@ -68,6 +74,7 @@ extern uint8_t DRV_status_byte;
 extern struct Stepper_state;
 
 extern float mag_angle;
+extern float stepper_neutral_angle;
 
 // DRV8434S SPI functions
 uint8_t Stepper_write_reg(uint8_t address, uint8_t data);
@@ -109,6 +116,8 @@ void Stepper_FaultHandler();
 
 // testing
 void Stepper_setSpeed(float revolutions_per_second);
+void Stepper_setTargetSpeed(float deg_s);
+void Stepper_setTargetDeg(float degrees);
 void Stepper_updateSpeed(float freq, float pos);
 
 void Stepper_setTargetDeg(float degrees);

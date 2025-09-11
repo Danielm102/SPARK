@@ -8,14 +8,17 @@ DRV8434S_diag2_t DRV_diag2;
 
 uint8_t DRV_status_byte;    // holds SPI response status bits. 0xC0 = no faults
 float speed_setpoint;
+float pos_deviation;
 
 struct {
-    uint8_t state;
+    stepper_mode_t mode;
     float pos_prev;
     float pos_cmd;
     float time_prev;
     float time_cmd;
-    float speed;
+    float speed_prev;
+    float speed_cmd;
+    float speed_target;
 } stepper;
 
 /* --------------------------------- DRV8434S SPI functions --------------------------------- */
@@ -367,7 +370,7 @@ void Stepper_getREV_ID(uint8_t *id) {
 void Stepper_Init() {
     Stepper_Wakeup();
 
-    stepper.state = 0;
+    stepper.mode = target_pos;
 
     HAL_Delay(5);
 
@@ -404,8 +407,9 @@ void Stepper_FaultHandler() {
 }
 
 void Stepper_setSpeed(float revolutions_per_second) {
+    stepper.speed_prev = revolutions_per_second;
     Stepper_Enable();   // make sure stepper is enabled
-    if(revolutions_per_second == 0) {
+    if((revolutions_per_second >= -STEPPER_MIN_SPEED) && (revolutions_per_second <= STEPPER_MIN_SPEED)) {
         HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_1);
         return;
     } else if(revolutions_per_second < 0) {
@@ -434,25 +438,45 @@ void Stepper_setSpeed(float revolutions_per_second) {
 }
 
 void Stepper_setTargetDeg(float degrees) {
-    stepper.pos_cmd = degrees;
+    stepper.mode = target_pos;
+    stepper.pos_cmd = degrees + stepper_neutral_angle;
+}
+
+void Stepper_setTargetSpeed(float deg_s) {
+    stepper.mode = target_speed;
+    stepper.speed_target = deg_s;
 }
 
 void Stepper_moveDeg(float degrees) {
+    if(stepper.mode != target_pos) {
+        stepper.mode = target_pos;
+        stepper.pos_cmd = mag_angle;
+    }
     stepper.pos_cmd += degrees;
 }
 
 void Stepper_updateSpeed(float freq, float pos) {
-    float dt = 1.f / freq;
+    // float dt = 1.f / freq; unused
     stepper.pos_prev = pos;
 
-    float deviation = pos - stepper.pos_cmd;
-    deviation *= 0.1;
-    stepper.speed = fconstrain(deviation, -STEPPER_MAX_SPEED, STEPPER_MAX_SPEED);
+    switch(stepper.mode) {
+        case target_pos:
+            pos_deviation = pos - stepper.pos_cmd;
 
-    if(deviation < STEPPER_MAX_POSITION_ERROR && deviation > STEPPER_MAX_POSITION_ERROR)
-        stepper.speed = 0;
+            // if position is within tolerance, disable timer
+            if(pos_deviation < STEPPER_MAX_POSITION_ERROR && pos_deviation > -STEPPER_MAX_POSITION_ERROR)
+                stepper.speed_target = 0;
+            else { // limit stepper angular rate
+                pos_deviation *= -0.02;
+                stepper.speed_target = fconstrain(pos_deviation, -STEPPER_MAX_SPEED, STEPPER_MAX_SPEED);
+            }
 
-    Stepper_setSpeed(stepper.speed);
+        case target_speed:
+            // limit stepper angular acceleration
+            stepper.speed_cmd = fconstrain((stepper.speed_target - stepper.speed_prev), -STEPPER_MAX_ACCELERATION / freq, STEPPER_MAX_ACCELERATION / freq) + stepper.speed_prev;
+    }
+
+    Stepper_setSpeed(stepper.speed_cmd);
 }
 
 float fconstrain(float variable, float min, float max) {

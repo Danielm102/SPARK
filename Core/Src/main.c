@@ -64,18 +64,16 @@ uint32_t tick_us_start = 0;
 uint16_t overflow_count = 0;
 uint32_t timestamp = 0;
 
-uint32_t dt_1000Hz;
 uint32_t dt_100Hz;
 uint32_t dt_10Hz;
 
-uint32_t loop_counter_1000Hz = 0;
 uint32_t loop_counter_100Hz = 0;
 uint32_t loop_counter_10Hz = 0;
 
 volatile uint8_t dma_waiting_ws2812;
 
 AS5600_status_t AS5600_status;
-int rotation_count = 0;
+int rotation_count = 1;
 
 float voltage_driver;
 float temperature_NTC1;
@@ -158,13 +156,6 @@ int main(void)
   while (1)
   {
     HAL_GetTickUS();
-    
-    if(tick_us > 1000 * loop_counter_1000Hz - TICK_US_RESET_THRESHOLD * tick_ks) {
-      TimeMeasureStart();
-      loop_counter_1000Hz++;
-      Loop_1000Hz();
-      dt_1000Hz = TimeMeasureStop();
-    }
 
     if(tick_us > 10000 * loop_counter_100Hz - TICK_US_RESET_THRESHOLD * tick_ks) {
       TimeMeasureStart();
@@ -187,31 +178,33 @@ void RunOnce()
 {
   SPARK_status = 1;
   Stepper_Init();
-  AS5600_readAngleRaw(&mag_angle);
-  Stepper_setTargetDeg(mag_angle);
 
-  Stepper_setSpeed(0.1);
-  Stepper_setSpeed(-0.1);
+  Stepper_setSpeed(-0.2);
+  //Stepper_setSpeed(0);
 
   Stepper_setStallDetection(DRV_STALL_DETECTION_ON, DRV_STALL_REPORT_ON_NFAULT);
 
+  AS5600_readAngleRaw(&mag_angle);
+  Stepper_setTargetDeg(mag_angle);
+
+  //Stepper_setTargetSpeed(0.1);
+
   timestamp = uwTick;
-}
-
-void Loop_1000Hz()
-{
-
 }
 
 void Loop_100Hz()
 {
   AS5600_readAngle(&mag_angle);
   Stepper_getFullStatus();
-  if((1 <= SPARK_status) && (SPARK_status <= 4)) {
-    Stepper_Zero();
-  } else {
-    Stepper_updateSpeed(100, mag_angle);
-  }
+  //if((1 <= SPARK_status) && (SPARK_status <= 4)) {
+    //Stepper_Zero();
+  //} else {
+  Stepper_updateSpeed(100, mag_angle);
+  if(round(remainder(loop_counter_100Hz, 100)) == 0)
+    Stepper_setTargetDeg(200);
+  if(round(remainder(loop_counter_100Hz, 100)) == 50)
+    Stepper_setTargetDeg(600);
+  //}
   ShowStatus(RGB_LED, SPARK_status, 1, 100);
 }
 
@@ -225,41 +218,41 @@ void Loop_10Hz()
 
 void Stepper_Zero() {
   Stepper_getTRQCount(&Stepper_TRQ);
-  if((SPARK_status == 1) && (Stepper_TRQ <= 250) && (Stepper_TRQ >= 200)) {
-    Stepper_stall_count++;
-    SPARK_status = 2;
-    timestamp = uwTick;
-    Stepper_setTargetDeg(mag_angle);
 
-  } else if((SPARK_status == 3) && (Stepper_TRQ <= 230) && (Stepper_TRQ >= 180)) {
-    Stepper_stall_count++;
-    SPARK_status = 4;
-    timestamp = uwTick;
-    stepper_neutral_angle = mag_angle;
-  }
-  
   switch(SPARK_status) {
     case 1: // move in slowly
       Stepper_setSpeed(-0.1);
+      if((Stepper_TRQ <= 250) && (Stepper_TRQ >= 200)) {
+        Stepper_stall_count++;
+        SPARK_status = 2;
+        timestamp = uwTick;
+        Stepper_setTargetDeg(mag_angle);
+      }
       break;
     case 2: // move out 10°
       Stepper_moveDeg(-0.5);
       Stepper_updateSpeed(100, mag_angle);
+      if(uwTick - timestamp > 1000) {
+        SPARK_status = 3;
+        Stepper_setSpeed(-0.05);
+        HAL_Delay(5);
+      }
       break;
     case 3:
+      if((Stepper_TRQ <= 230) && (Stepper_TRQ >= 180)) {
+        Stepper_stall_count++;
+        SPARK_status = 4;
+        timestamp = uwTick;
+        stepper_neutral_angle = mag_angle;
+      }
       break;
     case 4:
       Stepper_setSpeed(0);
+      if(uwTick - timestamp > 1000) {
+        SPARK_status = 5;
+        Stepper_moveDeg(-480);
+      }
       break;
-  }
-
-  if((SPARK_status == 2) && (uwTick - timestamp > 1000)) {
-    SPARK_status = 3;
-    Stepper_setSpeed(-0.05);
-    HAL_Delay(5);
-  } else if((SPARK_status == 4) && (uwTick - timestamp > 1000)) {
-    SPARK_status = 5;
-    Stepper_moveDeg(-480);
   }
 }
 
