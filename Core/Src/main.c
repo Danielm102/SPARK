@@ -85,6 +85,11 @@ float stepper_neutral_angle = 0;
 float mag_angle = 0;
 
 uint8_t SPARK_status = 0;
+
+// TESTING
+
+uint16_t STALL_TH;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -176,18 +181,19 @@ int main(void)
 
 void RunOnce() 
 {
-  SPARK_status = 1;
+  SPARK_status = 0;
   Stepper_Init();
 
-  Stepper_setSpeed(-0.2);
-  //Stepper_setSpeed(0);
-
-  Stepper_setStallDetection(DRV_STALL_DETECTION_ON, DRV_STALL_REPORT_ON_NFAULT);
-
+  // set target angle to current angle
   AS5600_readAngleRaw(&mag_angle);
   Stepper_setTargetDeg(mag_angle);
 
-  //Stepper_setTargetSpeed(0.1);
+  Stepper_Enable();
+  
+  Stepper_setSpeed(-0.1);
+
+  Stepper_setStallDetection(DRV_STALL_DETECTION_ON, DRV_STALL_REPORT_ON_NFAULT);
+  Stepper_learnStallCount();
 
   timestamp = uwTick;
 }
@@ -195,16 +201,19 @@ void RunOnce()
 void Loop_100Hz()
 {
   AS5600_readAngle(&mag_angle);
-  Stepper_getFullStatus();
-  //if((1 <= SPARK_status) && (SPARK_status <= 4)) {
-    //Stepper_Zero();
-  //} else {
-  Stepper_updateSpeed(100, mag_angle);
-  if(round(remainder(loop_counter_100Hz, 100)) == 0)
-    Stepper_setTargetDeg(200);
-  if(round(remainder(loop_counter_100Hz, 100)) == 50)
-    Stepper_setTargetDeg(600);
-  //}
+  
+  if((0 <= SPARK_status) && (SPARK_status <= 4)) {
+    Stepper_Zero();
+
+  } else {
+    Stepper_updateSpeed(100, mag_angle);
+
+    if(round(remainder(loop_counter_100Hz, 200)) == 0)
+      Stepper_setTargetDeg(210);
+
+    if(round(remainder(loop_counter_100Hz, 200)) == 100)
+      Stepper_setTargetDeg(600);
+  }
   ShowStatus(RGB_LED, SPARK_status, 1, 100);
 }
 
@@ -213,44 +222,52 @@ void Loop_10Hz()
   temperature_NTC1 = readTemperature(ADC_CHANNEL_0);
   temperature_NTC2 = readTemperature(ADC_CHANNEL_1);
   voltage_driver = readVoltage(ADC_CHANNEL_2) * 12.2f / 2.2f;
+
   AS5600_getStatus(&AS5600_status);
 }
 
 void Stepper_Zero() {
+  Stepper_getFullStatus();
   Stepper_getTRQCount(&Stepper_TRQ);
 
   switch(SPARK_status) {
+    case 0: 
+      Stepper_getStallThreshold(&STALL_TH);
+      if(DRV_diag2.STL_LRN_OK) {
+        SPARK_status = 1;
+      }
+      break;
+      //SPARK_status = 1;
     case 1: // move in slowly
-      Stepper_setSpeed(-0.1);
       if((Stepper_TRQ <= 250) && (Stepper_TRQ >= 200)) {
         Stepper_stall_count++;
-        SPARK_status = 2;
         timestamp = uwTick;
         Stepper_setTargetDeg(mag_angle);
+        SPARK_status = 2;
       }
       break;
     case 2: // move out 10°
       Stepper_moveDeg(-0.5);
       Stepper_updateSpeed(100, mag_angle);
       if(uwTick - timestamp > 1000) {
-        SPARK_status = 3;
         Stepper_setSpeed(-0.05);
         HAL_Delay(5);
+        SPARK_status = 3;
       }
       break;
     case 3:
       if((Stepper_TRQ <= 230) && (Stepper_TRQ >= 180)) {
         Stepper_stall_count++;
-        SPARK_status = 4;
         timestamp = uwTick;
         stepper_neutral_angle = mag_angle;
+        SPARK_status = 4;
       }
       break;
     case 4:
       Stepper_setSpeed(0);
       if(uwTick - timestamp > 1000) {
-        SPARK_status = 5;
         Stepper_moveDeg(-480);
+        SPARK_status = 5;
       }
       break;
   }

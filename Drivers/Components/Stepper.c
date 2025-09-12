@@ -291,6 +291,19 @@ void Stepper_learnStallCount() {
         Stepper_FaultHandler();
 }
 
+void Stepper_getStallThreshold(uint16_t *count) {
+    uint8_t data = 0;
+    uint16_t out;
+    Stepper_read_reg(DRV_CTRL6_REG, &data);
+    out = (uint16_t)data;
+
+    Stepper_read_reg(DRV_CTRL7_REG, &data);
+    data &= 0x0F;
+    out |= ((uint16_t)data) << 8;
+
+    *count = out;
+}
+
 // 0 - 4095 | default: 3
 void Stepper_setStallThreshold(uint16_t count) {
     uint8_t data = 0;
@@ -352,6 +365,7 @@ void Stepper_getTRQCount(uint16_t *count) {
     out = (uint16_t)data;
 
     Stepper_read_reg(DRV_CTRL9_REG, &data);
+    data &= 0x0F;
     out |= ((uint16_t)data) << 8;
 
     *count = out;

@@ -98,6 +98,7 @@ void Stepper_unlockRegisters();
 void Stepper_clearFaults();
 void Stepper_setStallDetection(bool STL_en, bool STL_report);
 void Stepper_learnStallCount();
+void Stepper_getStallThreshold(uint16_t *count);
 void Stepper_setStallThreshold(uint16_t count);
 void Stepper_scaleTorqueCount(bool TRQ_scale);
 void Stepper_setSpreadSpectrum(bool SSC_en);
