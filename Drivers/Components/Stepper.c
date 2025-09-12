@@ -10,16 +10,7 @@ uint8_t DRV_status_byte;    // holds SPI response status bits. 0xC0 = no faults
 float speed_setpoint;
 float pos_deviation;
 
-struct {
-    stepper_mode_t mode;
-    float pos_prev;
-    float pos_cmd;
-    float time_prev;
-    float time_cmd;
-    float speed_prev;
-    float speed_cmd;
-    float speed_target;
-} stepper;
+stepper_movement_t stepper;
 
 /* --------------------------------- DRV8434S SPI functions --------------------------------- */
 
@@ -397,8 +388,8 @@ void Stepper_Init() {
     Stepper_setTemperatureFault(DRV_OTW_NO_REPORT_NFAULT, DRV_OTS_MODE_LATCHED_FAULT);
     Stepper_setOvercurrentFault(DRV_OCP_MODE_LATCHED_FAULT);
     Stepper_OpenLoadDetection(DISABLE);
-    Stepper_setStallDetection(DRV_STALL_DETECTION_OFF, DRV_STALL_REPORT_ON_NFAULT);
-    Stepper_setStallThreshold(3);
+    Stepper_setStallDetection(DRV_STALL_DETECTION_ON, DRV_STALL_REPORT_ON_NFAULT);
+    Stepper_setStallThreshold(180);
     Stepper_scaleTorqueCount(DRV_TRQ_SCALE_MLT8);
     Stepper_setSpreadSpectrum(ENABLE);
     Stepper_setRCRipple(DRV_RC_RIPPLE_1_PERCENT);
@@ -420,9 +411,12 @@ void Stepper_FaultHandler() {
     Stepper_getFullStatus();
 }
 
+// update timer settings based on speed commands
 void Stepper_setSpeed(float revolutions_per_second) {
     stepper.speed_prev = revolutions_per_second;
     Stepper_Enable();   // make sure stepper is enabled
+
+    // set direction based on sign, stop timer if commanded speed is too low
     if((revolutions_per_second >= -STEPPER_MIN_SPEED) && (revolutions_per_second <= STEPPER_MIN_SPEED)) {
         HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_1);
         return;
@@ -433,8 +427,10 @@ void Stepper_setSpeed(float revolutions_per_second) {
         Stepper_setDirection(forward);
     }
 
+    // calculate prescaler for period = 10
     int prescaler = round((float)TIM1_BASE_FREQ/revolutions_per_second/STEPPER_STEPS_PER_REVOLUTION/DRV_STEP_DIV/TIM1_ARR);
 
+    // account for 16 bit prescaler limit by adjusting period
     if(prescaler > 65535) {
         int period = round(prescaler/65536.f + 0.5) * TIM1_ARR;
         __HAL_TIM_SET_AUTORELOAD(&htim1, period - 1);
@@ -451,16 +447,26 @@ void Stepper_setSpeed(float revolutions_per_second) {
     HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
 }
 
+// enter target position mode and set target position
 void Stepper_setTargetDeg(float degrees) {
     stepper.mode = target_pos;
-    stepper.pos_cmd = degrees + stepper_neutral_angle;
+    stepper.pos_cmd = degrees + stepper.neutral_angle;
 }
 
+// enter target speed mode and set target speed
 void Stepper_setTargetSpeed(float deg_s) {
     stepper.mode = target_speed;
     stepper.speed_target = deg_s;
 }
 
+// stop stepper without changing mode
+void Stepper_stopMoving() {
+    Stepper_setSpeed(0);
+    stepper.speed_target = 0;
+    stepper.pos_cmd = mag_angle;
+}
+
+// move by a certain number of degrees
 void Stepper_moveDeg(float degrees) {
     if(stepper.mode != target_pos) {
         stepper.mode = target_pos;
@@ -469,19 +475,24 @@ void Stepper_moveDeg(float degrees) {
     stepper.pos_cmd += degrees;
 }
 
+// update speed based on call frequency and current measured position
 void Stepper_updateSpeed(float freq, float pos) {
-    // float dt = 1.f / freq; unused
     stepper.pos_prev = pos;
 
     switch(stepper.mode) {
         case target_pos:
+            // calculate deviation from setpoint
             pos_deviation = pos - stepper.pos_cmd;
 
             // if position is within tolerance, disable timer
             if(pos_deviation < STEPPER_MAX_POSITION_ERROR && pos_deviation > -STEPPER_MAX_POSITION_ERROR)
                 stepper.speed_target = 0;
-            else { // limit stepper angular rate
+
+            else {
+                // apply K factor
                 pos_deviation *= -0.02;
+
+                // limit stepper angular rate
                 stepper.speed_target = fconstrain(pos_deviation, -STEPPER_MAX_SPEED, STEPPER_MAX_SPEED);
             }
 
@@ -491,14 +502,4 @@ void Stepper_updateSpeed(float freq, float pos) {
     }
 
     Stepper_setSpeed(stepper.speed_cmd);
-}
-
-float fconstrain(float variable, float min, float max) {
-    if(variable > max) {
-        return max;
-    } else if(variable < min) {
-        return min;
-    } else {
-        return variable;
-    }
 }

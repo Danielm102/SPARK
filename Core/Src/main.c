@@ -78,10 +78,7 @@ int rotation_count = 1;
 float voltage_driver;
 float temperature_NTC1;
 float temperature_NTC2;
-uint16_t Stepper_TRQ;
-uint8_t Stepper_stall_count;
 
-float stepper_neutral_angle = 0;
 float mag_angle = 0;
 
 uint8_t SPARK_status = 0;
@@ -190,10 +187,8 @@ void RunOnce()
 
   Stepper_Enable();
   
+  Stepper_setSpeed(0.1);
   Stepper_setSpeed(-0.1);
-
-  Stepper_setStallDetection(DRV_STALL_DETECTION_ON, DRV_STALL_REPORT_ON_NFAULT);
-  Stepper_learnStallCount();
 
   timestamp = uwTick;
 }
@@ -201,19 +196,21 @@ void RunOnce()
 void Loop_100Hz()
 {
   AS5600_readAngle(&mag_angle);
+
+  Stepper_updateSpeed(100, mag_angle);
   
   if((0 <= SPARK_status) && (SPARK_status <= 4)) {
     Stepper_Zero();
 
   } else {
-    Stepper_updateSpeed(100, mag_angle);
-
     if(round(remainder(loop_counter_100Hz, 200)) == 0)
-      Stepper_setTargetDeg(210);
+      Stepper_setTargetDeg(0);
 
     if(round(remainder(loop_counter_100Hz, 200)) == 100)
-      Stepper_setTargetDeg(600);
+      Stepper_setTargetDeg(300);
+
   }
+
   ShowStatus(RGB_LED, SPARK_status, 1, 100);
 }
 
@@ -228,48 +225,66 @@ void Loop_10Hz()
 
 void Stepper_Zero() {
   Stepper_getFullStatus();
-  Stepper_getTRQCount(&Stepper_TRQ);
+  Stepper_getTRQCount(&stepper.TRQ);
 
   switch(SPARK_status) {
-    case 0: 
-      Stepper_getStallThreshold(&STALL_TH);
-      if(DRV_diag2.STL_LRN_OK) {
-        SPARK_status = 1;
-      }
-      break;
-      //SPARK_status = 1;
-    case 1: // move in slowly
-      if((Stepper_TRQ <= 250) && (Stepper_TRQ >= 200)) {
-        Stepper_stall_count++;
+    case 0: // startup
+      // retract slowly
+      Stepper_setTargetSpeed(-0.1);
+      SPARK_status = 1;
+    case 1:
+      // detect first stall
+      if(DRV_diag2.STALL) {
+        Stepper_setSpeed(0);
+        stepper.stall_count++;
         timestamp = uwTick;
-        Stepper_setTargetDeg(mag_angle);
+
+        // extend 10 deg to ensure controlled neutral angle determination during second stall
+        Stepper_moveDeg(100);
         SPARK_status = 2;
       }
       break;
-    case 2: // move out 10°
-      Stepper_moveDeg(-0.5);
-      Stepper_updateSpeed(100, mag_angle);
+    case 2:
+      // wait one second so stepper has time to move
       if(uwTick - timestamp > 1000) {
-        Stepper_setSpeed(-0.05);
-        HAL_Delay(5);
+        // retract slowly again
+        Stepper_setTargetSpeed(-0.1);
         SPARK_status = 3;
       }
       break;
     case 3:
-      if((Stepper_TRQ <= 230) && (Stepper_TRQ >= 180)) {
-        Stepper_stall_count++;
+      // detect second stall
+      if(DRV_diag2.STALL) {
+        Stepper_setSpeed(0);
+        stepper.stall_count++;
         timestamp = uwTick;
-        stepper_neutral_angle = mag_angle;
+
+        // set stepper neutral angle to current angle so 0 deg target angle corresponds to closed position
+        stepper.neutral_angle = mag_angle;
         SPARK_status = 4;
       }
       break;
     case 4:
-      Stepper_setSpeed(0);
       if(uwTick - timestamp > 1000) {
-        Stepper_moveDeg(-480);
+        Stepper_moveDeg(300);
         SPARK_status = 5;
       }
       break;
+  }
+  /* USER CODE END 3 */
+}
+
+void HAL_GPIO_EXTI_Rising_Callback(uint16_t GPIO_Pin) {
+  // handle DRV8434S fault release
+  if(GPIO_Pin == DRV_FAULT_Pin) {
+    HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, GPIO_PIN_SET);
+  }
+}
+
+void HAL_GPIO_EXTI_Falling_Callback(uint16_t GPIO_Pin) {
+  // handle DRV8434S fault detection
+  if(GPIO_Pin == DRV_FAULT_Pin) {
+    HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, GPIO_PIN_RESET);
   }
 }
 
@@ -811,6 +826,13 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+  /* EXTI interrupt init*/
+  HAL_NVIC_SetPriority(EXTI2_3_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(EXTI2_3_IRQn);
+
+  HAL_NVIC_SetPriority(EXTI4_15_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(EXTI4_15_IRQn);
 
   /* USER CODE BEGIN MX_GPIO_Init_2 */
 

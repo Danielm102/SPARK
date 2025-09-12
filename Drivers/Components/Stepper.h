@@ -62,6 +62,20 @@ typedef struct {
     bool OL_A;       // open-load detection on AOUT
 } DRV8434S_diag2_t;
 
+typedef struct {
+    stepper_mode_t mode;
+    float neutral_angle;
+    float pos_prev;
+    float pos_cmd;
+    float time_prev;
+    float time_cmd;
+    float speed_prev;
+    float speed_cmd;
+    float speed_target;
+    uint16_t stall_count;
+    uint16_t TRQ;
+} stepper_movement_t;
+
 extern TIM_HandleTypeDef htim1;
 extern SPI_HandleTypeDef hspi1;
 
@@ -69,12 +83,11 @@ extern DRV8434S_status_t DRV_status;
 extern DRV8434S_diag1_t DRV_diag1;
 extern DRV8434S_diag2_t DRV_diag2;
 
+extern stepper_movement_t stepper;
+
 extern uint8_t DRV_status_byte;
 
-extern struct Stepper_state;
-
 extern float mag_angle;
-extern float stepper_neutral_angle;
 
 // DRV8434S SPI functions
 uint8_t Stepper_write_reg(uint8_t address, uint8_t data);
@@ -117,14 +130,11 @@ void Stepper_FaultHandler();
 
 // testing
 void Stepper_setSpeed(float revolutions_per_second);
+void Stepper_setTargetDeg(float degrees);
 void Stepper_setTargetSpeed(float deg_s);
-void Stepper_setTargetDeg(float degrees);
-void Stepper_updateSpeed(float freq, float pos);
-
-void Stepper_setTargetDeg(float degrees);
+void Stepper_stopMoving();
 void Stepper_moveDeg(float degrees);
-
-float fconstrain(float variable, float min, float max);
+void Stepper_updateSpeed(float freq, float pos);
 
 #define Stepper_Select()    HAL_GPIO_WritePin(DRV_CS_GPIO_Port, DRV_CS_Pin, 0)
 #define Stepper_Deselect()  HAL_GPIO_WritePin(DRV_CS_GPIO_Port, DRV_CS_Pin, 1)

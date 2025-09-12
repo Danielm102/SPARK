@@ -15,6 +15,8 @@ set(MX_Include_Dirs
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/STM32G0xx_HAL_Driver/Inc/Legacy
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/CMSIS/Device/ST/STM32G0xx/Include
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/CMSIS/Include
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/CMSIS/DSP/Lib
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/CMSIS/DSP/Include
 
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/Components
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/Libraries
@@ -58,6 +60,8 @@ set(STM32_Drivers_Src
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_hal_tim.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_hal_tim_ex.c
     
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/CMSIS/DSP/Lib/armMathAddon.c
+
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/Components/Stepper.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/Components/ws2812.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/Components/AS5600.c

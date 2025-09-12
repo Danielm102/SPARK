@@ -28,6 +28,7 @@ extern "C" {
 
 /* Includes ------------------------------------------------------------------*/
 #include "stm32g0xx_hal.h"
+
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "ws2812.h"
@@ -36,6 +37,7 @@ extern "C" {
 
 #include "stdbool.h"
 #include "math.h"
+#include "armMathAddon.h"
 
 #include "status.h"
 #include "VoltageReader.h"
@@ -76,10 +78,13 @@ uint32_t TimeMeasureStop(void);
 /* Private defines -----------------------------------------------------------*/
 #define FC_CS_Pin GPIO_PIN_9
 #define FC_CS_GPIO_Port GPIOB
+#define FC_CS_EXTI_IRQn EXTI4_15_IRQn
 #define SW1_Pin GPIO_PIN_14
 #define SW1_GPIO_Port GPIOC
+#define SW1_EXTI_IRQn EXTI4_15_IRQn
 #define SW2_Pin GPIO_PIN_15
 #define SW2_GPIO_Port GPIOC
+#define SW2_EXTI_IRQn EXTI4_15_IRQn
 #define NTC1_Pin GPIO_PIN_0
 #define NTC1_GPIO_Port GPIOA
 #define NTC2_Pin GPIO_PIN_1
@@ -88,6 +93,7 @@ uint32_t TimeMeasureStop(void);
 #define VD1_GPIO_Port GPIOA
 #define DRV_FAULT_Pin GPIO_PIN_3
 #define DRV_FAULT_GPIO_Port GPIOA
+#define DRV_FAULT_EXTI_IRQn EXTI2_3_IRQn
 #define DRV_VREF_Pin GPIO_PIN_4
 #define DRV_VREF_GPIO_Port GPIOA
 #define DRV_CS_Pin GPIO_PIN_0
