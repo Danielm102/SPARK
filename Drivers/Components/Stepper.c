@@ -389,7 +389,7 @@ void Stepper_Init() {
     Stepper_setOvercurrentFault(DRV_OCP_MODE_LATCHED_FAULT);
     Stepper_OpenLoadDetection(DISABLE);
     Stepper_setStallDetection(DRV_STALL_DETECTION_ON, DRV_STALL_REPORT_ON_NFAULT);
-    Stepper_setStallThreshold(180);
+    Stepper_setStallThreshold(200);
     Stepper_scaleTorqueCount(DRV_TRQ_SCALE_MLT8);
     Stepper_setSpreadSpectrum(ENABLE);
     Stepper_setRCRipple(DRV_RC_RIPPLE_1_PERCENT);

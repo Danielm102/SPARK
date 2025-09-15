@@ -124,7 +124,7 @@ int main(void)
   /* MCU Configuration--------------------------------------------------------*/
 
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
-  HAL_Init();
+-  HAL_Init();
 
   /* USER CODE BEGIN Init */
 
@@ -190,6 +190,10 @@ void RunOnce()
   Stepper_setSpeed(0.1);
   Stepper_setSpeed(-0.1);
 
+  Stepper_stopMoving();
+
+  HAL_Delay(100);
+
   timestamp = uwTick;
 }
 
@@ -203,11 +207,11 @@ void Loop_100Hz()
     Stepper_Zero();
 
   } else {
-    if(round(remainder(loop_counter_100Hz, 200)) == 0)
+    if(loop_counter_100Hz % 200 == 0)
       Stepper_setTargetDeg(0);
 
-    if(round(remainder(loop_counter_100Hz, 200)) == 100)
-      Stepper_setTargetDeg(300);
+    if(loop_counter_100Hz % 200 == 100)
+      Stepper_setTargetDeg(600);
 
   }
 
@@ -230,39 +234,36 @@ void Stepper_Zero() {
   switch(SPARK_status) {
     case 0: // startup
       // retract slowly
+      Stepper_setStallDetection(DRV_STALL_DETECTION_ON, DRV_STALL_REPORT_ON_NFAULT);
       Stepper_setTargetSpeed(-0.1);
-      SPARK_status = 1;
+      // status 1 entered by interrupt
+      break;
     case 1:
       // detect first stall
-      if(DRV_diag2.STALL) {
-        Stepper_setSpeed(0);
-        stepper.stall_count++;
-        timestamp = uwTick;
-
-        // extend 10 deg to ensure controlled neutral angle determination during second stall
-        Stepper_moveDeg(100);
-        SPARK_status = 2;
-      }
+      Stepper_clearFaults();
+      Stepper_setStallDetection(DRV_STALL_DETECTION_OFF, DRV_STALL_REPORT_ON_NFAULT);
+      // extend 10 deg to ensure controlled neutral angle determination during second stall
+      Stepper_moveDeg(100);
+      SPARK_status = 2;
       break;
     case 2:
       // wait one second so stepper has time to move
       if(uwTick - timestamp > 1000) {
+        timestamp = uwTick;
+        
         // retract slowly again
+        Stepper_setStallDetection(DRV_STALL_DETECTION_ON, DRV_STALL_REPORT_ON_NFAULT);
         Stepper_setTargetSpeed(-0.1);
-        SPARK_status = 3;
+        // status 3 entered by interrupt
       }
       break;
     case 3:
       // detect second stall
-      if(DRV_diag2.STALL) {
-        Stepper_setSpeed(0);
-        stepper.stall_count++;
-        timestamp = uwTick;
-
-        // set stepper neutral angle to current angle so 0 deg target angle corresponds to closed position
-        stepper.neutral_angle = mag_angle;
-        SPARK_status = 4;
-      }
+      Stepper_setStallDetection(DRV_STALL_DETECTION_OFF, DRV_STALL_REPORT_ON_NFAULT);
+      Stepper_clearFaults();
+      // set stepper neutral angle to current angle so 0 deg target angle corresponds to closed position
+      stepper.neutral_angle = mag_angle;
+      SPARK_status = 4;
       break;
     case 4:
       if(uwTick - timestamp > 1000) {
@@ -285,6 +286,17 @@ void HAL_GPIO_EXTI_Falling_Callback(uint16_t GPIO_Pin) {
   // handle DRV8434S fault detection
   if(GPIO_Pin == DRV_FAULT_Pin) {
     HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, GPIO_PIN_RESET);
+
+    Stepper_getFullStatus();
+    if(DRV_status.STL && (round(stepper.speed_cmd * 10.f) == -1)) {
+      Stepper_stopMoving();
+      stepper.stall_count++;
+      timestamp = uwTick;
+      if(SPARK_status == 0 || SPARK_status == 2)
+        SPARK_status++;
+      return;
+    }
+    Stepper_clearFaults();
   }
 }
 
