@@ -41,6 +41,7 @@ extern "C" {
 
 #include "status.h"
 #include "VoltageReader.h"
+#include "communication.h"
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/

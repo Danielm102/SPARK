@@ -70,6 +70,8 @@ uint32_t dt_10Hz;
 uint32_t loop_counter_100Hz = 0;
 uint32_t loop_counter_10Hz = 0;
 
+uint8_t spi2_tx_buffer[32] = {0};
+
 volatile uint8_t dma_waiting_ws2812;
 
 AS5600_status_t AS5600_status;
@@ -124,7 +126,7 @@ int main(void)
   /* MCU Configuration--------------------------------------------------------*/
 
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
--  HAL_Init();
+  HAL_Init();
 
   /* USER CODE BEGIN Init */
 
@@ -152,7 +154,6 @@ int main(void)
   
   RunOnce();
   /* USER CODE END 2 */
-
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
@@ -195,6 +196,8 @@ void RunOnce()
   HAL_Delay(100);
 
   timestamp = uwTick;
+
+  Communication_ActivateReceive();
 }
 
 void Loop_100Hz()
@@ -297,6 +300,24 @@ void HAL_GPIO_EXTI_Falling_Callback(uint16_t GPIO_Pin) {
       return;
     }
     Stepper_clearFaults();
+  } else if(GPIO_Pin == FC_CS_Pin) {
+    // handle falling edge of SPI1 chip select - start of new command packet
+    //Communication_ActivateReceive();
+  }
+}
+
+void HAL_SPI_TxRxCpltCallback(SPI_HandleTypeDef *hspi) {
+  if(hspi->Instance == SPI2) {
+    // Process received data
+    ProcessCommandPacket();
+    Communication_ActivateReceive();
+  }
+}
+
+void HAL_SPI_ErrorCallback(SPI_HandleTypeDef *hspi) {
+  if(hspi->Instance == SPI2) {
+    // Handle SPI error
+    Communication_ActivateReceive();
   }
 }
 
@@ -549,14 +570,14 @@ static void MX_SPI2_Init(void)
   hspi2.Instance = SPI2;
   hspi2.Init.Mode = SPI_MODE_SLAVE;
   hspi2.Init.Direction = SPI_DIRECTION_2LINES;
-  hspi2.Init.DataSize = SPI_DATASIZE_4BIT;
+  hspi2.Init.DataSize = SPI_DATASIZE_8BIT;
   hspi2.Init.CLKPolarity = SPI_POLARITY_LOW;
   hspi2.Init.CLKPhase = SPI_PHASE_1EDGE;
-  hspi2.Init.NSS = SPI_NSS_SOFT;
+  hspi2.Init.NSS = SPI_NSS_HARD_INPUT;
   hspi2.Init.FirstBit = SPI_FIRSTBIT_MSB;
   hspi2.Init.TIMode = SPI_TIMODE_DISABLE;
   hspi2.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
-  hspi2.Init.CRCPolynomial = 7;
+  hspi2.Init.CRCPolynomial = 10;
   hspi2.Init.CRCLength = SPI_CRC_LENGTH_DATASIZE;
   hspi2.Init.NSSPMode = SPI_NSS_PULSE_DISABLE;
   if (HAL_SPI_Init(&hspi2) != HAL_OK)
@@ -564,7 +585,8 @@ static void MX_SPI2_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN SPI2_Init 2 */
-
+  HAL_NVIC_SetPriority(SPI2_IRQn, 1, 0);
+  HAL_NVIC_EnableIRQ(SPI2_IRQn);
   /* USER CODE END SPI2_Init 2 */
 
 }
@@ -794,10 +816,10 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin : FC_CS_Pin */
-  GPIO_InitStruct.Pin = FC_CS_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING_FALLING;
-  GPIO_InitStruct.Pull = GPIO_PULLUP;
-  HAL_GPIO_Init(FC_CS_GPIO_Port, &GPIO_InitStruct);
+  //GPIO_InitStruct.Pin = FC_CS_Pin;
+  //GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
+  //GPIO_InitStruct.Pull = GPIO_NOPULL;
+  //HAL_GPIO_Init(FC_CS_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pins : SW1_Pin SW2_Pin */
   GPIO_InitStruct.Pin = SW1_Pin|SW2_Pin;
@@ -843,7 +865,7 @@ static void MX_GPIO_Init(void)
   HAL_NVIC_SetPriority(EXTI2_3_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(EXTI2_3_IRQn);
 
-  HAL_NVIC_SetPriority(EXTI4_15_IRQn, 0, 0);
+  HAL_NVIC_SetPriority(EXTI4_15_IRQn, 1, 0);
   HAL_NVIC_EnableIRQ(EXTI4_15_IRQn);
 
   /* USER CODE BEGIN MX_GPIO_Init_2 */
