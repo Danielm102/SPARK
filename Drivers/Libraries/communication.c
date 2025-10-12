@@ -20,7 +20,7 @@ void Communication_ActivateReceive(void) {
 void ProcessCommandPacket() {
   // Check the command target
 
-  if (command_packet.Packet_ID == PACKET_ID_COMMAND && command_packet.Data.command.command_target == COMMAND_TARGET_POWERUNIT) {
+  if (command_packet.Packet_ID == PACKET_ID_COMMAND && command_packet.Data.command.command_target == COMMAND_TARGET_SPARK) {
     // Process power unit command
   }
 }

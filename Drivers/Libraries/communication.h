@@ -10,7 +10,7 @@
 
 typedef enum __attribute__((packed)){
     COMMAND_TARGET_NONE = 0x00,
-    COMMAND_TARGET_POWERUNIT = 0x04,
+    COMMAND_TARGET_SPARK = 0x04,
     COMMAND_TARGET_ACK = 0x10,
 } CommandTarget_t;
 

@@ -9,11 +9,11 @@
 #define TIM1_BASE_FREQ  16000000
 #define TIM1_ARR        10
 
-#define DRV_STEP_SIZE DRV_STEP_1_256
+#define DRV_STEP_SIZE                   DRV_STEP_1_256
 #define DRV_STEP_DIV                    256
 #define STEPPER_STEPS_PER_REVOLUTION    200
 #define STEPPER_MAX_ACCELERATION        15     // revolutions/s²
-#define STEPPER_MAX_SPEED               5      // revolutions/s
+#define STEPPER_MAX_SPEED               3      // revolutions/s
 #define STEPPER_MIN_SPEED               0.0001 // revolutions/s
 #define STEPPER_MAX_POSITION_ERROR      0.05   // revolutions
 
