@@ -52,8 +52,12 @@ SPI_HandleTypeDef hspi2;
 TIM_HandleTypeDef htim1;
 TIM_HandleTypeDef htim2;
 TIM_HandleTypeDef htim3;
+TIM_HandleTypeDef htim7;
 DMA_HandleTypeDef hdma_tim1_ch1;
 DMA_HandleTypeDef hdma_tim2_ch1;
+
+volatile uint32_t tim7_ms = 0;
+uint32_t tim7_target_ms;
 
 /* USER CODE BEGIN PV */
 uint16_t tick_ks = 0;
@@ -103,6 +107,7 @@ static void MX_ADC1_Init(void);
 static void MX_DAC1_Init(void);
 static void MX_TIM2_Init(void);
 static void MX_TIM3_Init(void);
+static void MX_TIM7_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -150,10 +155,12 @@ int main(void)
   MX_DAC1_Init();
   MX_TIM2_Init();
   MX_TIM3_Init();
+  MX_TIM7_Init();
   /* USER CODE BEGIN 2 */
   
   RunOnce();
   /* USER CODE END 2 */
+
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
@@ -768,6 +775,44 @@ static void MX_TIM3_Init(void)
 }
 
 /**
+  * @brief TIM7 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM7_Init(void)
+{
+
+  /* USER CODE BEGIN TIM7_Init 0 */
+
+  /* USER CODE END TIM7_Init 0 */
+
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  /* USER CODE BEGIN TIM7_Init 1 */
+
+  /* USER CODE END TIM7_Init 1 */
+  htim7.Instance = TIM7;
+  htim7.Init.Prescaler = 15;
+  htim7.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim7.Init.Period = 999;
+  htim7.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim7) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim7, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM7_Init 2 */
+
+  /* USER CODE END TIM7_Init 2 */
+
+}
+
+/**
   * Enable DMA controller clock
   */
 static void MX_DMA_Init(void)
@@ -876,11 +921,11 @@ static void MX_GPIO_Init(void)
 /* USER CODE BEGIN 4 */
 void HAL_TIM_PWM_PulseFinishedCallback(TIM_HandleTypeDef *htim)
 {
-  if(htim->Instance == TIM1 && htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1) {
+  if (htim->Instance == TIM1 && htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1) {
     HAL_TIM_PWM_Stop_DMA(&htim1, TIM_CHANNEL_1);
     Stepper_Disable();
   }
-  if(htim->Instance == TIM2 && htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1) {
+  if (htim->Instance == TIM2 && htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1) {
     HAL_TIM_PWM_Stop_DMA(&htim2, TIM_CHANNEL_1);
     dma_waiting_ws2812 = 0;
   }
@@ -888,9 +933,18 @@ void HAL_TIM_PWM_PulseFinishedCallback(TIM_HandleTypeDef *htim)
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
-  if(htim->Instance == TIM1 && htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1) {
+  if (htim->Instance == TIM1 && htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1) {
     // PWM burst finished
     HAL_TIM_PWM_Stop(htim, TIM_CHANNEL_1);
+  }
+  else if (htim->Instance == TIM7) {
+    tim7_ms++;
+    if (tim7_ms >= tim7_target_ms) {
+      tim7_ms = 0;
+      HAL_TIM_Base_Stop_IT(&htim7);
+      
+
+    }
   }
 }
 
@@ -901,7 +955,7 @@ uint32_t HAL_GetTickUS(void) {
 
   tick_raw = tick_now;
   tick_us = tick_raw + overflow_count * 65536;
-  if(tick_us > TICK_US_RESET_THRESHOLD) {
+  if (tick_us > TICK_US_RESET_THRESHOLD) {
     tick_ks++;
     overflow_count = 0;
   }
@@ -915,7 +969,7 @@ void TimeMeasureStart(void) {
 
 uint32_t TimeMeasureStop(void) {
   int32_t time_diff = HAL_GetTickUS() - tick_us_start;
-  if(time_diff < 0)
+  if (time_diff < 0)
     time_diff += TICK_US_RESET_THRESHOLD;
   return time_diff;
 }
