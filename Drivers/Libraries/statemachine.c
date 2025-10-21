@@ -31,7 +31,7 @@ static sm_state_t StandbyHandler(sm_event_t event) {
     switch (event) {
         case EVENT_UVLO:                return STATE_FAULT;
         case EVENT_DRIVER_OVERHEAT:     return STATE_FAULT;
-        case EVENT_CMD_ZERO_STEPPER:    return STATE_ZEROING;
+        case EVENT_CMD_ZERO_STEPPER:    return STATE_ZEROING_RETRACT1;
         case EVENT_CMD_TARGET_POSITION: return STATE_TARGET_POSITION;
         case EVENT_CMD_TARGET_SPEED:    return STATE_TARGET_SPEED;
         case EVENT_CMD_FIND_MAX:        return STATE_FIND_MAX;
@@ -57,13 +57,32 @@ static sm_state_t TargetSpeedHandler(sm_event_t event) {
     }
 }
 
-static sm_state_t ZeroingHandler(sm_event_t event) {
+static sm_state_t ZeroingRetract1Handler(sm_event_t event) {
     switch (event) {
         case EVENT_UVLO:                return STATE_FAULT;
         case EVENT_DRIVER_OVERHEAT:     return STATE_FAULT;
         case EVENT_CMD_EXIT_MODE:       return STATE_STANDBY;
-        case EVENT_ZEROING_COMPLETE:    return STATE_STANDBY;
-        default: return STATE_ZEROING;
+        case EVENT_STEPPER_STALLED:     return STATE_ZEROING_EXTEND;
+        default: return STATE_ZEROING_RETRACT1;
+    }
+}
+
+static sm_state_t ZeroingExtendHandler(sm_event_t event) {
+    switch (event) {
+        case EVENT_UVLO:                return STATE_FAULT;
+        case EVENT_DRIVER_OVERHEAT:     return STATE_FAULT;
+        case EVENT_CMD_EXIT_MODE:       return STATE_STANDBY;
+        default: return STATE_ZEROING_EXTEND;
+    }
+}
+
+static sm_state_t ZeroingRetract2Handler(sm_event_t event) {
+    switch (event) {
+        case EVENT_UVLO:                return STATE_FAULT;
+        case EVENT_DRIVER_OVERHEAT:     return STATE_FAULT;
+        case EVENT_CMD_EXIT_MODE:       return STATE_STANDBY;
+        case EVENT_STEPPER_STALLED:     return STATE_STANDBY;
+        default: return STATE_ZEROING_RETRACT2;
     }
 }
 
@@ -79,12 +98,32 @@ static sm_state_t FindMaxHandler(sm_event_t event) {
 
 /* --- Entry actions --- */
 static void FaultEntry(StateMachine_t *sm) {}
-static void StartupEntry(StateMachine_t *sm) {}
-static void InitEntry(StateMachine_t *sm) {}
-static void StandbyEntry(StateMachine_t *sm) {}
-static void TargetPositionEntry(StateMachine_t *sm) {}
-static void TargetSpeedEntry(StateMachine_t *sm) {}
-static void ZeroingEntry(StateMachine_t *sm) {}
+static void StartupEntry(StateMachine_t *sm) {
+    stepper.active = false;
+}
+static void InitEntry(StateMachine_t *sm) {
+    stepper.active = false;
+}
+static void StandbyEntry(StateMachine_t *sm) {
+    stepper.active = false;
+}
+static void TargetPositionEntry(StateMachine_t *sm) {
+    stepper.active = true;
+}
+static void TargetSpeedEntry(StateMachine_t *sm) {
+    stepper.active = true;
+}
+static void ZeroingRetract1Entry(StateMachine_t *sm) {
+    stepper.active = true;
+    Stepper_setStallDetection(DRV_STALL_DETECTION_ON, DRV_STALL_REPORT_ON_NFAULT);
+    Stepper_setTargetSpeed(-36); // -36 deg/s
+}
+static void ZeroingExtendEntry(StateMachine_t *sm) {
+    Stepper_moveDeg(10); // extend 10 deg
+}
+static void ZeroingRetract2Entry(StateMachine_t *sm) {
+    Stepper_setTargetSpeed(-36); // -36 deg/s
+}
 static void FindMaxEntry(StateMachine_t *sm) {}
 
 /* --- Do actions --- */
@@ -94,7 +133,9 @@ static void InitDo(StateMachine_t *sm, uint16_t freq) {}
 static void StandbyDo(StateMachine_t *sm, uint16_t freq) {}
 static void TargetPositionDo(StateMachine_t *sm, uint16_t freq) {}
 static void TargetSpeedDo(StateMachine_t *sm, uint16_t freq) {}
-static void ZeroingDo(StateMachine_t *sm, uint16_t freq) {}
+static void ZeroingRetract1Do(StateMachine_t *sm, uint16_t freq) {}
+static void ZeroingExtendDo(StateMachine_t *sm, uint16_t freq) {}
+static void ZeroingRetract2Do(StateMachine_t *sm, uint16_t freq) {}
 static void FindMaxDo(StateMachine_t *sm, uint16_t freq) {}
 
 /* --- Exit actions --- */
@@ -104,7 +145,12 @@ static void InitExit(StateMachine_t *sm) {}
 static void StandbyExit(StateMachine_t *sm) {}
 static void TargetPositionExit(StateMachine_t *sm) {}
 static void TargetSpeedExit(StateMachine_t *sm) {}
-static void ZeroingExit(StateMachine_t *sm) {}
+static void ZeroingRetract1Exit(StateMachine_t *sm) {}
+static void ZeroingExtendExit(StateMachine_t *sm) {}
+static void ZeroingRetract2Exit(StateMachine_t *sm) {
+    // set stepper neutral angle to current angle so 0 deg target angle corresponds to closed position
+    stepper.neutral_angle = mag_angle;
+}
 static void FindMaxExit(StateMachine_t *sm) {}
 
 /* --- Lookup tables for state functions --- */
@@ -115,7 +161,9 @@ static StateHandler_t stateHandlerTable[STATE_MAX] = {
     StandbyHandler,
     TargetPositionHandler,
     TargetSpeedHandler,
-    ZeroingHandler,
+    ZeroingRetract1Handler,
+    ZeroingExtendHandler,
+    ZeroingRetract2Handler,
     FindMaxHandler
 };
 
@@ -126,7 +174,9 @@ static StateEntry_t stateEntryTable[STATE_MAX] = {
     StandbyEntry,
     TargetPositionEntry,
     TargetSpeedEntry,
-    ZeroingEntry,
+    ZeroingRetract1Entry,
+    ZeroingExtendEntry,
+    ZeroingRetract2Entry,
     FindMaxEntry
 };
 
@@ -137,7 +187,9 @@ static StateDo_t stateDoTable[STATE_MAX] = {
     StandbyDo,
     TargetPositionDo,
     TargetSpeedDo,
-    ZeroingDo,
+    ZeroingRetract1Do,
+    ZeroingExtendDo,
+    ZeroingRetract2Do,
     FindMaxDo
 };
 
@@ -148,7 +200,9 @@ static StateExit_t stateExitTable[STATE_MAX] = {
     StandbyExit,
     TargetPositionExit,
     TargetSpeedExit,
-    ZeroingExit,
+    ZeroingRetract1Exit,
+    ZeroingExtendExit,
+    ZeroingRetract2Exit,
     FindMaxExit
 };
 
@@ -165,7 +219,7 @@ uint32_t minEventDelayTable[EVENT_MAX] = {
     0,
     0,
     0,
-    0
+    500
 };
 
 uint32_t maxEventDelayTable[STATE_MAX] = {
@@ -175,7 +229,9 @@ uint32_t maxEventDelayTable[STATE_MAX] = {
     0,
     0,
     0,
+    5000,
     0,
+    1000,
     0
 };
 

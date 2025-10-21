@@ -68,7 +68,6 @@ uint32_t tick_us = 0;
 uint32_t tick_raw = 0;
 uint32_t tick_us_start = 0;
 uint16_t overflow_count = 0;
-uint32_t timestamp = 0;
 
 uint32_t dt_100Hz;
 uint32_t dt_10Hz;
@@ -81,17 +80,12 @@ uint8_t spi2_tx_buffer[32] = {0};
 volatile uint8_t dma_waiting_ws2812;
 
 AS5600_status_t AS5600_status;
-int rotation_count = 0;
 
 float voltage_driver;
 float temperature_NTC1;
 float temperature_NTC2;
 
 float mag_angle = 0;
-
-// TESTING
-
-uint16_t STALL_TH;
 
 /* USER CODE END PV */
 
@@ -203,8 +197,6 @@ void RunOnce()
 
   HAL_Delay(100);
 
-  timestamp = uwTick;
-
   Communication_ActivateReceive();
 }
 
@@ -216,7 +208,7 @@ void Loop_100Hz()
 
   Stepper_updateSpeed(100, mag_angle);
 
-  ShowStatus(RGB_LED, sm, 1, 100);
+  ShowStatus(RGB_LED, spark_sm.currentState, 1, 100);
 }
 
 void Loop_10Hz()
@@ -228,54 +220,6 @@ void Loop_10Hz()
   StateMachine_DoActions(&spark_sm, 10);
 
   AS5600_getStatus(&AS5600_status);
-}
-
-void Stepper_Zero() {
-  Stepper_getFullStatus();
-  Stepper_getTRQCount(&stepper.TRQ);
-
-  switch(SPARK_status) {
-    case 0: // startup
-      // retract slowly
-      Stepper_setStallDetection(DRV_STALL_DETECTION_ON, DRV_STALL_REPORT_ON_NFAULT);
-      Stepper_setTargetSpeed(-0.1);
-      // status 1 entered by interrupt
-      break;
-    case 1:
-      // detect first stall
-      Stepper_clearFaults();
-      Stepper_setStallDetection(DRV_STALL_DETECTION_OFF, DRV_STALL_REPORT_ON_NFAULT);
-      // extend 10 deg to ensure controlled neutral angle determination during second stall
-      Stepper_moveDeg(100);
-      SPARK_status = 2;
-      break;
-    case 2:
-      // wait one second so stepper has time to move
-      if(uwTick - timestamp > 1000) {
-        timestamp = uwTick;
-        
-        // retract slowly again
-        Stepper_setStallDetection(DRV_STALL_DETECTION_ON, DRV_STALL_REPORT_ON_NFAULT);
-        Stepper_setTargetSpeed(-0.1);
-        // status 3 entered by interrupt
-      }
-      break;
-    case 3:
-      // detect second stall
-      Stepper_setStallDetection(DRV_STALL_DETECTION_OFF, DRV_STALL_REPORT_ON_NFAULT);
-      Stepper_clearFaults();
-      // set stepper neutral angle to current angle so 0 deg target angle corresponds to closed position
-      stepper.neutral_angle = mag_angle;
-      SPARK_status = 4;
-      break;
-    case 4:
-      if(uwTick - timestamp > 1000) {
-        Stepper_moveDeg(300);
-        SPARK_status = 5;
-      }
-      break;
-  }
-  /* USER CODE END 3 */
 }
 
 void HAL_GPIO_EXTI_Rising_Callback(uint16_t GPIO_Pin) {
@@ -291,14 +235,14 @@ void HAL_GPIO_EXTI_Falling_Callback(uint16_t GPIO_Pin) {
     HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, GPIO_PIN_RESET);
 
     Stepper_getFullStatus();
-    if(DRV_status.STL && (round(stepper.speed_cmd * 10.f) == -1)) {
-      Stepper_stopMoving();
+    
+    if (DRV_status.STL) {
       stepper.stall_count++;
-      timestamp = uwTick;
-      if(SPARK_status == 0 || SPARK_status == 2)
-        SPARK_status++;
-      return;
+      StateMachine_Dispatch(&spark_sm, EVENT_STEPPER_STALLED);
     }
+    if (DRV_status.UVLO) StateMachine_Dispatch(&spark_sm, EVENT_UVLO);
+    if (DRV_status.TF) StateMachine_Dispatch(&spark_sm, EVENT_DRIVER_OVERHEAT);
+
     Stepper_clearFaults();
   } else if(GPIO_Pin == FC_CS_Pin) {
     // handle falling edge of SPI1 chip select - start of new command packet
@@ -936,7 +880,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
       tim7_ms = 0;
       HAL_TIM_Base_Stop_IT(&htim7);
       
-
+      StateMachine_Dispatch(&spark_sm, EVENT_STEPPER_STALLED);
     }
   }
 }

@@ -19,7 +19,7 @@ void AS5600_getStatus(AS5600_status_t *status);
 void AS5600_readAngleRaw(float *raw_angle);
 void AS5600_readAngle(float *angle);
 
-void AngleConstrainedToContinuous(float constrained_angle, float *continuous_angle, float *rotation_count)
+void AngleConstrainedToContinuous(float constrained_angle, float *continuous_angle, float *rotation_count);
 
 #define AS5600_I2C_ADDR (0x36 << 1)
 

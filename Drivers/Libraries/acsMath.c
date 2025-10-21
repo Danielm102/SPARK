@@ -1,10 +1,8 @@
 #include "acsMath.h"
 
-void CircleIntersectionPoints(float x1, float y1, float r1,
-                              float x2, float y2, float r2,
-                              float *xi1, float *yi1,
-                              float *xi2, float *yi2,
-                              int *num_intersections) {
+void CircleIntersectionPoints(float x1, float y1, float r1, float x2, float y2, float r2,
+                              float *xi1, float *yi1, float *xi2, float *yi2, int *num_intersections)
+{
     float dx = x2 - x1;
     float dy = y2 - y1;
     float d = sqrtf(dx * dx + dy * dy);
@@ -39,12 +37,12 @@ void CircleIntersectionPoints(float x1, float y1, float r1,
     }
 }
 
-void ACSAngleFromStepperAngle(float stepper_angle_deg, float *acs_angle_deg) {
+void ACSAngleFromStepperPosition(float stepper_pos, float *acs_angle_deg) {
     float AE_squared = LENGTH_AE * LENGTH_AE;
     float BE_squared = LENGTH_BE * LENGTH_BE;
 
     // TODO: relative angle wrt stepper zero position
-    float Ay = stepper_angle_deg * ROD_SLOPE / 360.0f;
+    float Ay = stepper_pos;
 
     float AB_squared = Ay * Ay + POSITION_BX * POSITION_BX;
 
@@ -61,7 +59,7 @@ void ACSAngleFromStepperAngle(float stepper_angle_deg, float *acs_angle_deg) {
     *acs_angle_deg = atanf((Dy - POSITION_CY + (Dx - POSITION_CX) * W_term) / ((Dx - POSITION_CX) - (Dy - POSITION_CY) * W_term)) * 180.0f / M_PI;
 }
 
-void StepperAngleFromACSAngle(float acs_angle_deg, float *stepper_angle_deg) {
+void StepperPositionFromACSAngle(float acs_angle_deg, float *stepper_pos) {
     float AE_squared = LENGTH_AE * LENGTH_AE;
     float BD_squared = LENGTH_BD * LENGTH_BD;
 
@@ -78,5 +76,5 @@ void StepperAngleFromACSAngle(float acs_angle_deg, float *stepper_angle_deg) {
     float Ay = Ey + sqrtf(AE_squared - Ex * Ex);
 
     // TODO: relative angle wrt stepper zero position
-    *stepper_angle_deg = Ay * 360.0f / ROD_SLOPE;
+    *stepper_pos = Ay;
 }

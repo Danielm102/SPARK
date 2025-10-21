@@ -456,7 +456,7 @@ void Stepper_setTargetDeg(float degrees) {
 // enter target speed mode and set target speed
 void Stepper_setTargetSpeed(float deg_s) {
     stepper.mode = target_speed;
-    stepper.speed_target = deg_s;
+    stepper.speed_target = deg_s / 360.f;
 }
 
 // stop stepper without changing mode
@@ -477,6 +477,8 @@ void Stepper_moveDeg(float degrees) {
 
 // update speed based on call frequency and current measured position
 void Stepper_updateSpeed(float freq, float pos) {
+    if (!stepper.active) return;
+    
     stepper.pos_prev = pos;
 
     switch(stepper.mode) {

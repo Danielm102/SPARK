@@ -63,12 +63,11 @@ typedef struct {
 } DRV8434S_diag2_t;
 
 typedef struct {
+    bool active;
     stepper_mode_t mode;
     float neutral_angle;
     float pos_prev;
     float pos_cmd;
-    float time_prev;
-    float time_cmd;
     float speed_prev;
     float speed_cmd;
     float speed_target;
