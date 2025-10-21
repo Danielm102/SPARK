@@ -38,6 +38,7 @@ extern "C" {
 #include "stdbool.h"
 #include "math.h"
 #include "armMathAddon.h"
+#include "acsMath.h"
 
 #include "status.h"
 #include "VoltageReader.h"

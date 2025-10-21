@@ -69,6 +69,7 @@ set(STM32_Drivers_Src
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/Libraries/VoltageReader.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/Libraries/communication.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/Libraries/statemachine.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/Libraries/acsMath.c
 )
 
 # Drivers Midllewares

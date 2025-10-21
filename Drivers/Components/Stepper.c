@@ -379,15 +379,15 @@ void Stepper_Init() {
 
     HAL_Delay(5);
 
-    Stepper_setOpenLoadMode(DRV_OL_RELEASE_AFTER_CLEAR);
+    Stepper_setOpenLoadMode(DRV_OL_RELEASE_IMMEDIATELY);
     Stepper_setTorque(DRV_TRQ_08_16);
     Stepper_setDecay(DRV_DECAY_SMART_TUNE_RIPPLE_CONTROL);
     Stepper_setTOFF(DRV_TOFF_16_US);
     Stepper_setMicrostep(DRV_STEP_SIZE);
     Stepper_configInputMode(DRV_INPUT_MODE_PIN);
-    Stepper_setTemperatureFault(DRV_OTW_NO_REPORT_NFAULT, DRV_OTS_MODE_LATCHED_FAULT);
+    Stepper_setTemperatureFault(DRV_OTW_REPORT_ON_NFAULT, DRV_OTS_MODE_LATCHED_FAULT);
     Stepper_setOvercurrentFault(DRV_OCP_MODE_LATCHED_FAULT);
-    Stepper_OpenLoadDetection(DISABLE);
+    Stepper_OpenLoadDetection(ENABLE);
     Stepper_setStallDetection(DRV_STALL_DETECTION_ON, DRV_STALL_REPORT_ON_NFAULT);
     Stepper_setStallThreshold(200);
     Stepper_scaleTorqueCount(DRV_TRQ_SCALE_MLT8);

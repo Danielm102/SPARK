@@ -14,16 +14,32 @@
 
 /* --- Define all possible states --- */
 typedef enum {
+    STATE_FAULT,
     STATE_STARTUP,
     STATE_INIT,
+    STATE_STANDBY,
+    STATE_TARGET_POSITION,
+    STATE_TARGET_SPEED,
+    STATE_ZEROING,
+    STATE_FIND_MAX,
 
     STATE_MAX
 } sm_state_t;
 
 /* --- Define all possible events --- */
 typedef enum {
-    EVENT_DUMMY1,
-    EVENT_DUMMY2,
+    EVENT_UVLO,                 // under-voltage lockout detected
+    EVENT_DRIVER_OVERHEAT,      // motor driver overheat detected
+    EVENT_FAULT_CLEARED,        // fault condition cleared
+    EVENT_STARTUP_COMPLETE,     // startup sequence complete
+    EVENT_STEPPER_CONNECTED,
+    EVENT_CMD_ZERO_STEPPER,
+    EVENT_CMD_TARGET_POSITION,
+    EVENT_CMD_TARGET_SPEED,
+    EVENT_CMD_FIND_MAX,
+    EVENT_CMD_EXIT_MODE,
+    EVENT_ZEROING_COMPLETE,
+    EVEMT_FIND_MAX_COMPLETE,
 
     EVENT_MAX
 } sm_event_t;

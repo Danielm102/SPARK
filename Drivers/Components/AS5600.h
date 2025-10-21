@@ -10,8 +10,6 @@ typedef struct {
     bool MD;
 } AS5600_status_t;
 
-extern int rotation_count;
-
 extern I2C_HandleTypeDef hi2c2;
 
 HAL_StatusTypeDef AS5600_write_reg(uint8_t reg, uint8_t data);
@@ -20,6 +18,8 @@ HAL_StatusTypeDef AS5600_read_reg(uint8_t start_reg, uint8_t *data, uint8_t leng
 void AS5600_getStatus(AS5600_status_t *status);
 void AS5600_readAngleRaw(float *raw_angle);
 void AS5600_readAngle(float *angle);
+
+void AngleConstrainedToContinuous(float constrained_angle, float *continuous_angle, float *rotation_count)
 
 #define AS5600_I2C_ADDR (0x36 << 1)
 
@@ -43,8 +43,5 @@ void AS5600_readAngle(float *angle);
 #define AS5600_BURN_REG 0xFF        // 1 W
 #define AS5600_BURN_ANGLE 0x80
 #define AS5600_BURN_SETTING 0x40
-
-
-
 
 #endif /* AS5600_H_ */

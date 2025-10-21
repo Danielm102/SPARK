@@ -8,7 +8,8 @@
         "cmath": "c",
         "status.h": "c",
         "communication.h": "c",
-        "statemachine.h": "c"
+        "statemachine.h": "c",
+        "math.h": "c"
     },
     "C_Cpp.errorSquiggles": "enabled",
 }

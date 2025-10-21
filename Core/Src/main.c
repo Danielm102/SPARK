@@ -56,10 +56,12 @@ TIM_HandleTypeDef htim7;
 DMA_HandleTypeDef hdma_tim1_ch1;
 DMA_HandleTypeDef hdma_tim2_ch1;
 
+/* USER CODE BEGIN PV */
 volatile uint32_t tim7_ms = 0;
 uint32_t tim7_target_ms;
 
-/* USER CODE BEGIN PV */
+StateMachine_t spark_sm;
+
 uint16_t tick_ks = 0;
 uint32_t tick_ms = 0;
 uint32_t tick_us = 0;
@@ -79,15 +81,13 @@ uint8_t spi2_tx_buffer[32] = {0};
 volatile uint8_t dma_waiting_ws2812;
 
 AS5600_status_t AS5600_status;
-int rotation_count = 1;
+int rotation_count = 0;
 
 float voltage_driver;
 float temperature_NTC1;
 float temperature_NTC2;
 
 float mag_angle = 0;
-
-uint8_t SPARK_status = 0;
 
 // TESTING
 
@@ -186,7 +186,8 @@ int main(void)
 
 void RunOnce() 
 {
-  SPARK_status = 0;
+  StateMachine_Init(&spark_sm, STATE_STARTUP);
+
   Stepper_Init();
 
   // set target angle to current angle
@@ -211,28 +212,20 @@ void Loop_100Hz()
 {
   AS5600_readAngle(&mag_angle);
 
+  StateMachine_DoActions(&spark_sm, 100);
+
   Stepper_updateSpeed(100, mag_angle);
-  
-  if((0 <= SPARK_status) && (SPARK_status <= 4)) {
-    Stepper_Zero();
 
-  } else {
-    if(loop_counter_100Hz % 200 == 0)
-      Stepper_setTargetDeg(0);
-
-    if(loop_counter_100Hz % 200 == 100)
-      Stepper_setTargetDeg(600);
-
-  }
-
-  ShowStatus(RGB_LED, SPARK_status, 1, 100);
+  ShowStatus(RGB_LED, sm, 1, 100);
 }
 
 void Loop_10Hz()
-{
+{ 
   temperature_NTC1 = readTemperature(ADC_CHANNEL_0);
   temperature_NTC2 = readTemperature(ADC_CHANNEL_1);
   voltage_driver = readVoltage(ADC_CHANNEL_2) * 12.2f / 2.2f;
+
+  StateMachine_DoActions(&spark_sm, 10);
 
   AS5600_getStatus(&AS5600_status);
 }

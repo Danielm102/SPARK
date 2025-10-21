@@ -34,7 +34,7 @@ void AS5600_readAngleRaw(float *raw_angle) {
     data[0] &= 0x0F;
     data_fused = (uint16_t)data[1];
     data_fused |= (uint16_t)data[0] << 8;
-    *raw_angle = (data_fused / -4096.f + 1) * 360.f;
+    *raw_angle = data_fused / -4096.f * 360.f;
 }
 
 void AS5600_readAngle(float *angle) {
@@ -44,11 +44,16 @@ void AS5600_readAngle(float *angle) {
     data[0] &= 0x0F;
     data_fused = (uint16_t)data[1];
     data_fused |= (uint16_t)data[0] << 8;
-    float angle_new = (data_fused / -4096.f + rotation_count) * 360.f;
-    if(angle_new - *angle > 180) {
-        rotation_count--;
-    } else if(*angle - angle_new > 180) {
+    *angle = data_fused / -4096.f * 360.f;
+}
+
+void AngleConstrainedToContinuous(float constrained_angle, float *continuous_angle, float *rotation_count) {
+    float angle_new = constrained_angle + *rotation_count * 360.f;
+    if(angle_new - *continuous_angle < 180) {
         rotation_count++;
+        *continuous_angle = angle_new + 360.f;
+    } else if(angle_new - *continuous_angle > 180) {
+        rotation_count--;
+        *continuous_angle = angle_new - 360.f;
     }
-    *angle = (data_fused / -4096.f + rotation_count) * 360.f;
 }
