@@ -60,6 +60,10 @@ typedef void (*StateExit_t)(StateMachine_t *sm);
 extern TIM_HandleTypeDef htim7;
 extern uint32_t tim7_target_ms;
 
+extern float mag_angle_continuous;
+
+extern float voltage_driver;
+
 /* --- Function declarations --- */
 void StateMachine_Init(StateMachine_t *sm, sm_state_t initialState);
 void StateMachine_Dispatch(StateMachine_t *sm, sm_event_t event);

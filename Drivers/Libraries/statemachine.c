@@ -2,6 +2,9 @@
 
 StateMachine_t flight_sm;
 
+uint8_t status_data = 0;
+uint8_t selftest_tries = 0;
+
 /* --- Event handlers --- */
 
 static sm_state_t FaultHandler(sm_event_t event) {
@@ -13,7 +16,6 @@ static sm_state_t FaultHandler(sm_event_t event) {
 
 static sm_state_t StartupHandler(sm_event_t event) {
     switch (event) {
-        case EVENT_DRIVER_OVERHEAT:     return STATE_FAULT;
         case EVENT_STARTUP_COMPLETE:    return STATE_INIT;
         default: return STATE_STARTUP;
     }
@@ -21,7 +23,6 @@ static sm_state_t StartupHandler(sm_event_t event) {
 
 static sm_state_t InitHandler(sm_event_t event) {
     switch (event) {
-        case EVENT_DRIVER_OVERHEAT:     return STATE_FAULT;
         case EVENT_STEPPER_CONNECTED:   return STATE_STANDBY;
         default: return STATE_INIT;
     }
@@ -100,11 +101,17 @@ static sm_state_t FindMaxHandler(sm_event_t event) {
 static void FaultEntry(StateMachine_t *sm) {}
 static void StartupEntry(StateMachine_t *sm) {
     stepper.active = false;
+    Stepper_Wakeup();
+    HAL_Delay(5);
 }
 static void InitEntry(StateMachine_t *sm) {
     stepper.active = false;
+    // set stepper neutral angle to current angle so 0 deg target angle corresponds to closed position
+    Stepper_Init();
+    stepper.neutral_angle = mag_angle_continuous;
 }
 static void StandbyEntry(StateMachine_t *sm) {
+    Stepper_Enable();
     stepper.active = false;
 }
 static void TargetPositionEntry(StateMachine_t *sm) {
@@ -128,8 +135,28 @@ static void FindMaxEntry(StateMachine_t *sm) {}
 
 /* --- Do actions --- */
 static void FaultDo(StateMachine_t *sm, uint16_t freq) {}
-static void StartupDo(StateMachine_t *sm, uint16_t freq) {}
-static void InitDo(StateMachine_t *sm, uint16_t freq) {}
+static void StartupDo(StateMachine_t *sm, uint16_t freq) {
+    // Selftest is called with 10 Hz
+    if (freq != 10) return;
+
+    if ((status_data & 0x03) == 0x03) {
+        // all selftests passed
+        StateMachine_Dispatch(sm, EVENT_STARTUP_COMPLETE);
+        status_data |= (1 << 7);
+    } else {
+        selftest_tries++;
+        status_data |= (Stepper_SelfTest() << 0);
+        status_data |= (1 << 1); // (AS5600_SelfTest() << 1);
+    }
+}
+static void InitDo(StateMachine_t *sm, uint16_t freq) {
+    if (freq != 10) return;
+
+    Stepper_getFullStatus();
+    if (!DRV_status.FAULT && voltage_driver >= 12.0f) {
+        StateMachine_Dispatch(sm, EVENT_STEPPER_CONNECTED);
+    }
+}
 static void StandbyDo(StateMachine_t *sm, uint16_t freq) {}
 static void TargetPositionDo(StateMachine_t *sm, uint16_t freq) {}
 static void TargetSpeedDo(StateMachine_t *sm, uint16_t freq) {}
@@ -149,7 +176,7 @@ static void ZeroingRetract1Exit(StateMachine_t *sm) {}
 static void ZeroingExtendExit(StateMachine_t *sm) {}
 static void ZeroingRetract2Exit(StateMachine_t *sm) {
     // set stepper neutral angle to current angle so 0 deg target angle corresponds to closed position
-    stepper.neutral_angle = mag_angle;
+    stepper.neutral_angle = mag_angle_continuous;
 }
 static void FindMaxExit(StateMachine_t *sm) {}
 
@@ -212,7 +239,7 @@ uint32_t minEventDelayTable[EVENT_MAX] = {
     0,
     0,
     0,
-    0,
+    1000,
     0,
     0,
     0,

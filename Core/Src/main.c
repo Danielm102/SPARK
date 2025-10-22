@@ -86,6 +86,8 @@ float temperature_NTC1;
 float temperature_NTC2;
 
 float mag_angle = 0;
+float rotation_count = 0;
+float mag_angle_continuous = 0;
 
 /* USER CODE END PV */
 
@@ -180,22 +182,9 @@ int main(void)
 
 void RunOnce() 
 {
-  StateMachine_Init(&spark_sm, STATE_STARTUP);
-
-  Stepper_Init();
-
-  // set target angle to current angle
-  AS5600_readAngleRaw(&mag_angle);
-  Stepper_setTargetDeg(mag_angle);
-
-  Stepper_Enable();
-  
-  Stepper_setSpeed(1);
-  Stepper_setSpeed(-1);
-
-  Stepper_stopMoving();
-
+  Stepper_Sleep();
   HAL_Delay(100);
+  StateMachine_Init(&spark_sm, STATE_STARTUP);
 
   Communication_ActivateReceive();
 }
@@ -203,10 +192,11 @@ void RunOnce()
 void Loop_100Hz()
 {
   AS5600_readAngle(&mag_angle);
+  AngleConstrainedToContinuous(mag_angle, &rotation_count, &mag_angle_continuous);
 
   StateMachine_DoActions(&spark_sm, 100);
 
-  Stepper_updateSpeed(100, mag_angle);
+  Stepper_updateSpeed(100, mag_angle_continuous);
 
   ShowStatus(RGB_LED, spark_sm.currentState, 1, 100);
 }
@@ -235,7 +225,7 @@ void HAL_GPIO_EXTI_Falling_Callback(uint16_t GPIO_Pin) {
     HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, GPIO_PIN_RESET);
 
     Stepper_getFullStatus();
-    
+
     if (DRV_status.STL) {
       stepper.stall_count++;
       StateMachine_Dispatch(&spark_sm, EVENT_STEPPER_STALLED);

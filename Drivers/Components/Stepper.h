@@ -86,40 +86,39 @@ extern stepper_movement_t stepper;
 
 extern uint8_t DRV_status_byte;
 
-extern float mag_angle;
-
 // DRV8434S SPI functions
 uint8_t Stepper_write_reg(uint8_t address, uint8_t data);
 uint8_t Stepper_read_reg(uint8_t address, uint8_t *data);
-void Stepper_getFullStatus();
-void Stepper_setOpenLoadMode(bool mode);
-void Stepper_setTorque(uint8_t torque);
-void Stepper_setDecay(uint8_t decay);
-void Stepper_setTOFF(uint8_t t_off);
-void Stepper_enableControl();
-void Stepper_disableControl();
-void Stepper_setMicrostep(uint8_t microstep_mode);
-void Stepper_configInputMode(uint8_t input_mode);
-void Stepper_setDIR_SPI(stepper_dir_t dir);
-void Stepper_setSTEP_SPI(bool step);
-void Stepper_setTemperatureFault(bool OTW_report_nFAULT, bool OTS_auto_recovery);
-void Stepper_setOvercurrentFault(bool OC_auto_retry);
-void Stepper_OpenLoadDetection(bool OL_en);
-void Stepper_lockRegisters();
-void Stepper_unlockRegisters();
-void Stepper_clearFaults();
-void Stepper_setStallDetection(bool STL_en, bool STL_report);
-void Stepper_learnStallCount();
-void Stepper_getStallThreshold(uint16_t *count);
-void Stepper_setStallThreshold(uint16_t count);
-void Stepper_scaleTorqueCount(bool TRQ_scale);
-void Stepper_setSpreadSpectrum(bool SSC_en);
-void Stepper_setRCRipple(uint8_t ripple);
-void Stepper_getTRQCount(uint16_t *count);
-void Stepper_getREV_ID(uint8_t *id);
+HAL_StatusTypeDef Stepper_getFullStatus();
+HAL_StatusTypeDef Stepper_setOpenLoadMode(bool mode);
+HAL_StatusTypeDef Stepper_setTorque(uint8_t torque);
+HAL_StatusTypeDef Stepper_setDecay(uint8_t decay);
+HAL_StatusTypeDef Stepper_setTOFF(uint8_t t_off);
+HAL_StatusTypeDef Stepper_enableControl();
+HAL_StatusTypeDef Stepper_disableControl();
+HAL_StatusTypeDef Stepper_setMicrostep(uint8_t microstep_mode);
+HAL_StatusTypeDef Stepper_configInputMode(uint8_t input_mode);
+HAL_StatusTypeDef Stepper_setDIR_SPI(stepper_dir_t dir);
+HAL_StatusTypeDef Stepper_setSTEP_SPI(bool step);
+HAL_StatusTypeDef Stepper_setTemperatureFault(bool OTW_report_nFAULT, bool OTS_auto_recovery);
+HAL_StatusTypeDef Stepper_setOvercurrentFault(bool OC_auto_retry);
+HAL_StatusTypeDef Stepper_OpenLoadDetection(bool OL_en);
+HAL_StatusTypeDef Stepper_lockRegisters();
+HAL_StatusTypeDef Stepper_unlockRegisters();
+HAL_StatusTypeDef Stepper_clearFaults();
+HAL_StatusTypeDef Stepper_setStallDetection(bool STL_en, bool STL_report);
+HAL_StatusTypeDef Stepper_learnStallCount();
+HAL_StatusTypeDef Stepper_getStallThreshold(uint16_t *count);
+HAL_StatusTypeDef Stepper_setStallThreshold(uint16_t count);
+HAL_StatusTypeDef Stepper_scaleTorqueCount(bool TRQ_scale);
+HAL_StatusTypeDef Stepper_setSpreadSpectrum(bool SSC_en);
+HAL_StatusTypeDef Stepper_setRCRipple(uint8_t ripple);
+HAL_StatusTypeDef Stepper_getTRQCount(uint16_t *count);
+HAL_StatusTypeDef Stepper_getREV_ID(uint8_t *id);
+bool Stepper_SelfTest();
 
 // Stepper motor control functions
-void Stepper_Init();
+HAL_StatusTypeDef Stepper_Init();
 void Stepper_setDirection(stepper_dir_t dir);
 void Stepper_moveSteps(int16_t steps);
 void Stepper_movetoPos(float pos_cmd);

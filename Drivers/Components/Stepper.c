@@ -24,9 +24,11 @@ uint8_t Stepper_write_reg(uint8_t address, uint8_t data) {
 
     // STATUS = 1 | 1 | UVLO | CPUV | OCP | STL | TF | OL
     DRV_HAL_SPI_status = HAL_SPI_TransmitReceive(&hspi1, tx, rx, 2, HAL_MAX_DELAY);
-    DRV_status_byte = rx[0];
-
     Stepper_Deselect();
+    if (DRV_HAL_SPI_status != HAL_OK) return 0;
+
+    DRV_status_byte = rx[0];
+    
     return rx[0];
 }
 
@@ -39,16 +41,19 @@ uint8_t Stepper_read_reg(uint8_t address, uint8_t *data) {
 
     // STATUS = 1 | 1 | UVLO | CPUV | OCP | STL | TF | OL
     DRV_HAL_SPI_status = HAL_SPI_TransmitReceive(&hspi1, tx, rx, 2, HAL_MAX_DELAY);
+    Stepper_Deselect();
+    if (DRV_HAL_SPI_status != HAL_OK) return 0;
+
     *data = rx[1];
     DRV_status_byte = rx[0];
 
-    Stepper_Deselect();
     return rx[0];
 }
 
-void Stepper_getFullStatus() {
+HAL_StatusTypeDef Stepper_getFullStatus() {
     uint8_t data = 0;
     Stepper_read_reg(DRV_FAULT_STATUS_REG, &data);
+    if (DRV_HAL_SPI_status != HAL_OK) return DRV_HAL_SPI_status;
     DRV_status.OL        = 0x01 & (data);
     DRV_status.TF        = 0x01 & (data >> 1);
     DRV_status.STL       = 0x01 & (data >> 2);
@@ -59,6 +64,7 @@ void Stepper_getFullStatus() {
     DRV_status.FAULT     = 0x01 & (data >> 7);
 
     Stepper_read_reg(DRV_DIAG_STATUS1_REG, &data);
+    if (DRV_HAL_SPI_status != HAL_OK) return DRV_HAL_SPI_status;
     DRV_diag1.OCP_HS1_A = 0x01 & (data);
     DRV_diag1.OCP_LS1_A = 0x01 & (data >> 1);
     DRV_diag1.OCP_HS2_A = 0x01 & (data >> 2);
@@ -69,332 +75,418 @@ void Stepper_getFullStatus() {
     DRV_diag1.OCP_LS2_B = 0x01 & (data >> 7);
 
     Stepper_read_reg(DRV_DIAG_STATUS2_REG, &data);
+    if (DRV_HAL_SPI_status != HAL_OK) return DRV_HAL_SPI_status;
     DRV_diag2.OL_A       = 0x01 & (data);
     DRV_diag2.OL_B       = 0x01 & (data >> 1);
     DRV_diag2.STALL      = 0x01 & (data >> 3);
     DRV_diag2.STL_LRN_OK = 0x01 & (data >> 4);
     DRV_diag2.OTS        = 0x01 & (data >> 5);
     DRV_diag2.OTW        = 0x01 & (data >> 6);
+
+    return HAL_OK;
 }
 
 // default: DRV_OL_RELEASE_AFTER_CLEAR
-void Stepper_setOpenLoadMode(bool mode) {
+HAL_StatusTypeDef Stepper_setOpenLoadMode(bool mode) {
     uint8_t data;
-    if(Stepper_read_reg(DRV_CTRL1_REG, &data) != DRV_STATUS_BYTE_OK) 
+    if (Stepper_read_reg(DRV_CTRL1_REG, &data) != DRV_STATUS_BYTE_OK) 
         Stepper_FaultHandler();
+    if (DRV_HAL_SPI_status != HAL_OK) return DRV_HAL_SPI_status;
 
     data &= 0xFD;
     data |= mode << 1;
-    if(Stepper_write_reg(DRV_CTRL1_REG, data) != DRV_STATUS_BYTE_OK)
+    if (Stepper_write_reg(DRV_CTRL1_REG, data) != DRV_STATUS_BYTE_OK)
         Stepper_FaultHandler();
+    return DRV_HAL_SPI_status;
 }
 
 // default: DRV_TRQ_16_16
-void Stepper_setTorque(uint8_t torque) {
+HAL_StatusTypeDef Stepper_setTorque(uint8_t torque) {
     uint8_t data;
-    if(Stepper_read_reg(DRV_CTRL1_REG, &data) != DRV_STATUS_BYTE_OK) 
+    if (Stepper_read_reg(DRV_CTRL1_REG, &data) != DRV_STATUS_BYTE_OK) 
         Stepper_FaultHandler();
+    if (DRV_HAL_SPI_status != HAL_OK) return DRV_HAL_SPI_status;
 
     data &= 0x0F;
     data |= torque << 4;
-    if(Stepper_write_reg(DRV_CTRL1_REG, data) != DRV_STATUS_BYTE_OK)
+    if (Stepper_write_reg(DRV_CTRL1_REG, data) != DRV_STATUS_BYTE_OK)
         Stepper_FaultHandler();
+    return DRV_HAL_SPI_status;
 }
 
 // default: DRV_DECAY_SMART_TUNE_RIPPLE_CONTROL
-void Stepper_setDecay(uint8_t decay) {
+HAL_StatusTypeDef Stepper_setDecay(uint8_t decay) {
     uint8_t data = 0;
-    if(Stepper_read_reg(DRV_CTRL2_REG, &data) != DRV_STATUS_BYTE_OK) 
+    if (Stepper_read_reg(DRV_CTRL2_REG, &data) != DRV_STATUS_BYTE_OK) 
         Stepper_FaultHandler();
+    if (DRV_HAL_SPI_status != HAL_OK) return DRV_HAL_SPI_status;
 
     data &= 0xF8;
     data |= decay;
-    if(Stepper_write_reg(DRV_CTRL2_REG, data) != DRV_STATUS_BYTE_OK)
+    if (Stepper_write_reg(DRV_CTRL2_REG, data) != DRV_STATUS_BYTE_OK)
         Stepper_FaultHandler();
+    return DRV_HAL_SPI_status;
 }
 
 // automatically adjusted for smart tune ripple control | default: DRV_TOFF_16_US
-void Stepper_setTOFF(uint8_t t_off) {
+HAL_StatusTypeDef Stepper_setTOFF(uint8_t t_off) {
     uint8_t data = 0;
-    if(Stepper_read_reg(DRV_CTRL2_REG, &data) != DRV_STATUS_BYTE_OK) 
+    if (Stepper_read_reg(DRV_CTRL2_REG, &data) != DRV_STATUS_BYTE_OK) 
         Stepper_FaultHandler();
+    if (DRV_HAL_SPI_status != HAL_OK) return DRV_HAL_SPI_status;
 
     data &= 0xE7;
     data |= t_off << 3;
-    if(Stepper_write_reg(DRV_CTRL2_REG, data) != DRV_STATUS_BYTE_OK)
+    if (Stepper_write_reg(DRV_CTRL2_REG, data) != DRV_STATUS_BYTE_OK)
         Stepper_FaultHandler();
+    return DRV_HAL_SPI_status;
 }
 
-void Stepper_enableControl() {
+HAL_StatusTypeDef Stepper_enableControl() {
     uint8_t data = 0;
-    if(Stepper_read_reg(DRV_CTRL2_REG, &data) != DRV_STATUS_BYTE_OK) 
+    if (Stepper_read_reg(DRV_CTRL2_REG, &data) != DRV_STATUS_BYTE_OK) 
         Stepper_FaultHandler();
+    if (DRV_HAL_SPI_status != HAL_OK) return DRV_HAL_SPI_status;
 
     data |= 0x80;
-    if(Stepper_write_reg(DRV_CTRL2_REG, data) != DRV_STATUS_BYTE_OK)
+    if (Stepper_write_reg(DRV_CTRL2_REG, data) != DRV_STATUS_BYTE_OK)
         Stepper_FaultHandler();
+    return DRV_HAL_SPI_status;
 }
 
-void Stepper_disableControl() {
+HAL_StatusTypeDef Stepper_disableControl() {
     uint8_t data = 0;
-    if(Stepper_read_reg(DRV_CTRL2_REG, &data) != DRV_STATUS_BYTE_OK) 
+    if (Stepper_read_reg(DRV_CTRL2_REG, &data) != DRV_STATUS_BYTE_OK) 
         Stepper_FaultHandler();
+    if (DRV_HAL_SPI_status != HAL_OK) return DRV_HAL_SPI_status;
 
     data &= 0x7F;
-    if(Stepper_write_reg(DRV_CTRL2_REG, data) != DRV_STATUS_BYTE_OK)
+    if (Stepper_write_reg(DRV_CTRL2_REG, data) != DRV_STATUS_BYTE_OK)
         Stepper_FaultHandler();
+    return DRV_HAL_SPI_status;
 }
 
 // default: DRV_STEP_FULL_100
-void Stepper_setMicrostep(uint8_t microstep_mode) {
+HAL_StatusTypeDef Stepper_setMicrostep(uint8_t microstep_mode) {
     uint8_t data = 0;
-    if(Stepper_read_reg(DRV_CTRL3_REG, &data) != DRV_STATUS_BYTE_OK) 
+    if (Stepper_read_reg(DRV_CTRL3_REG, &data) != DRV_STATUS_BYTE_OK) 
         Stepper_FaultHandler();
+    if (DRV_HAL_SPI_status != HAL_OK) return DRV_HAL_SPI_status;
 
     data &= 0xF0;
     data |= microstep_mode;
-    if(Stepper_write_reg(DRV_CTRL3_REG, data) != DRV_STATUS_BYTE_OK)
+    if (Stepper_write_reg(DRV_CTRL3_REG, data) != DRV_STATUS_BYTE_OK)
         Stepper_FaultHandler();
+    return DRV_HAL_SPI_status;
 }
 
 // default: DRV_INPUT_MODE_PIN
-void Stepper_configInputMode(uint8_t input_mode) {
+HAL_StatusTypeDef Stepper_configInputMode(uint8_t input_mode) {
     uint8_t data = 0;
-    if(Stepper_read_reg(DRV_CTRL3_REG, &data) != DRV_STATUS_BYTE_OK) 
+    if (Stepper_read_reg(DRV_CTRL3_REG, &data) != DRV_STATUS_BYTE_OK) 
         Stepper_FaultHandler();
+    if (DRV_HAL_SPI_status != HAL_OK) return DRV_HAL_SPI_status;
 
     data &= 0xCF;
     data |= input_mode << 4;
-    if(Stepper_write_reg(DRV_CTRL3_REG, data) != DRV_STATUS_BYTE_OK)
+    if (Stepper_write_reg(DRV_CTRL3_REG, data) != DRV_STATUS_BYTE_OK)
         Stepper_FaultHandler();
+    return DRV_HAL_SPI_status;
 }
 
 // default: 0 (reverse)
-void Stepper_setDIR_SPI(stepper_dir_t dir) {
+HAL_StatusTypeDef Stepper_setDIR_SPI(stepper_dir_t dir) {
     uint8_t data = 0;
-    if(Stepper_read_reg(DRV_CTRL3_REG, &data) != DRV_STATUS_BYTE_OK) 
+    if (Stepper_read_reg(DRV_CTRL3_REG, &data) != DRV_STATUS_BYTE_OK) 
         Stepper_FaultHandler();
+    if (DRV_HAL_SPI_status != HAL_OK) return DRV_HAL_SPI_status;
 
     data &= 0x7F;
     data |= dir << 7;
-    if(Stepper_write_reg(DRV_CTRL3_REG, data) != DRV_STATUS_BYTE_OK)
+    if (Stepper_write_reg(DRV_CTRL3_REG, data) != DRV_STATUS_BYTE_OK)
         Stepper_FaultHandler();
+    return DRV_HAL_SPI_status;
 }
 
-void Stepper_setSTEP_SPI(bool step) {
+HAL_StatusTypeDef Stepper_setSTEP_SPI(bool step) {
     uint8_t data = 0;
-    if(Stepper_read_reg(DRV_CTRL3_REG, &data) != DRV_STATUS_BYTE_OK) 
+    if (Stepper_read_reg(DRV_CTRL3_REG, &data) != DRV_STATUS_BYTE_OK) 
         Stepper_FaultHandler();
+    if (DRV_HAL_SPI_status != HAL_OK) return DRV_HAL_SPI_status;
 
     data &= 0xBF;
     data |= step << 6;
-    if(Stepper_write_reg(DRV_CTRL3_REG, data) != DRV_STATUS_BYTE_OK)
+    if (Stepper_write_reg(DRV_CTRL3_REG, data) != DRV_STATUS_BYTE_OK)
         Stepper_FaultHandler();
+    return DRV_HAL_SPI_status;
 }
 
 // default: DRV_OTW_NO_REPORT_NFAULT, DRV_OTS_MODE_LATCHED_FAULT
-void Stepper_setTemperatureFault(bool OTW_report_nFAULT, bool OTS_auto_recovery) {
+HAL_StatusTypeDef Stepper_setTemperatureFault(bool OTW_report_nFAULT, bool OTS_auto_recovery) {
     uint8_t data = 0;
-    if(Stepper_read_reg(DRV_CTRL4_REG, &data) != DRV_STATUS_BYTE_OK) 
+    if (Stepper_read_reg(DRV_CTRL4_REG, &data) != DRV_STATUS_BYTE_OK) 
         Stepper_FaultHandler();
+    if (DRV_HAL_SPI_status != HAL_OK) return DRV_HAL_SPI_status;
 
     data &= 0xFC;
     data |= OTW_report_nFAULT | (OTS_auto_recovery << 1);
-    if(Stepper_write_reg(DRV_CTRL4_REG, data) != DRV_STATUS_BYTE_OK)
+    if (Stepper_write_reg(DRV_CTRL4_REG, data) != DRV_STATUS_BYTE_OK)
         Stepper_FaultHandler();
+    return DRV_HAL_SPI_status;
 }
 
 // default: DRV_OCP_MODE_LATCHED_FAULT
-void Stepper_setOvercurrentFault(bool OC_auto_retry) {
+HAL_StatusTypeDef Stepper_setOvercurrentFault(bool OC_auto_retry) {
     uint8_t data = 0;
-    if(Stepper_read_reg(DRV_CTRL4_REG, &data) != DRV_STATUS_BYTE_OK) 
+    if (Stepper_read_reg(DRV_CTRL4_REG, &data) != DRV_STATUS_BYTE_OK) 
         Stepper_FaultHandler();
+    if (DRV_HAL_SPI_status != HAL_OK) return DRV_HAL_SPI_status;
 
     data &= 0xFB;
     data |= OC_auto_retry << 2;
-    if(Stepper_write_reg(DRV_CTRL4_REG, data) != DRV_STATUS_BYTE_OK)
+    if (Stepper_write_reg(DRV_CTRL4_REG, data) != DRV_STATUS_BYTE_OK)
         Stepper_FaultHandler();
+    return DRV_HAL_SPI_status;
 }
 
 // default: DISABLE
-void Stepper_OpenLoadDetection(bool OL_en) {
+HAL_StatusTypeDef Stepper_OpenLoadDetection(bool OL_en) {
     uint8_t data = 0;
-    if(Stepper_read_reg(DRV_CTRL4_REG, &data) != DRV_STATUS_BYTE_OK) 
+    if (Stepper_read_reg(DRV_CTRL4_REG, &data) != DRV_STATUS_BYTE_OK) 
         Stepper_FaultHandler();
+    if (DRV_HAL_SPI_status != HAL_OK) return DRV_HAL_SPI_status;
 
     data &= 0xF7;
     data |= OL_en << 3;
-    if(Stepper_write_reg(DRV_CTRL4_REG, data) != DRV_STATUS_BYTE_OK)
+    if (Stepper_write_reg(DRV_CTRL4_REG, data) != DRV_STATUS_BYTE_OK)
         Stepper_FaultHandler();
+    return DRV_HAL_SPI_status;
 }
 
-void Stepper_lockRegisters() {
+HAL_StatusTypeDef Stepper_lockRegisters() {
     uint8_t data = 0;
-    if(Stepper_read_reg(DRV_CTRL4_REG, &data) != DRV_STATUS_BYTE_OK) 
+    if (Stepper_read_reg(DRV_CTRL4_REG, &data) != DRV_STATUS_BYTE_OK) 
         Stepper_FaultHandler();
+    if (DRV_HAL_SPI_status != HAL_OK) return DRV_HAL_SPI_status;
 
     data &= 0x8F;
     data |= DRV_LOCK_REGISTERS << 4;
-    if(Stepper_write_reg(DRV_CTRL4_REG, data) != DRV_STATUS_BYTE_OK)
+    if (Stepper_write_reg(DRV_CTRL4_REG, data) != DRV_STATUS_BYTE_OK)
         Stepper_FaultHandler();
+    return DRV_HAL_SPI_status;
 }
 
-void Stepper_unlockRegisters() {
+HAL_StatusTypeDef Stepper_unlockRegisters() {
     uint8_t data = 0;
-    if(Stepper_read_reg(DRV_CTRL4_REG, &data) != DRV_STATUS_BYTE_OK) 
+    if (Stepper_read_reg(DRV_CTRL4_REG, &data) != DRV_STATUS_BYTE_OK) 
         Stepper_FaultHandler();
+    if (DRV_HAL_SPI_status != HAL_OK) return DRV_HAL_SPI_status;
 
     data &= 0x8F;
     data |= DRV_UNLOCK_REGISTERS << 4;
-    if(Stepper_write_reg(DRV_CTRL4_REG, data) != DRV_STATUS_BYTE_OK)
+    if (Stepper_write_reg(DRV_CTRL4_REG, data) != DRV_STATUS_BYTE_OK)
         Stepper_FaultHandler();
+    return DRV_HAL_SPI_status;
 }
 
-void Stepper_clearFaults() {
+HAL_StatusTypeDef Stepper_clearFaults() {
     uint8_t data = 0;
-    if(Stepper_read_reg(DRV_CTRL4_REG, &data) != DRV_STATUS_BYTE_OK) 
+    if (Stepper_read_reg(DRV_CTRL4_REG, &data) != DRV_STATUS_BYTE_OK) 
         Stepper_FaultHandler();
+    if (DRV_HAL_SPI_status != HAL_OK) return DRV_HAL_SPI_status;
 
     data |= 0x80;
-    if(Stepper_write_reg(DRV_CTRL4_REG, data) != DRV_STATUS_BYTE_OK)
+    if (Stepper_write_reg(DRV_CTRL4_REG, data) != DRV_STATUS_BYTE_OK)
         Stepper_FaultHandler();
+    return DRV_HAL_SPI_status;
 }
 
 // default: DRV_STALL_DETECTION_OFF, DRV_STALL_REPORT_ON_NFAULT
-void Stepper_setStallDetection(bool STL_en, bool STL_report) {
+HAL_StatusTypeDef Stepper_setStallDetection(bool STL_en, bool STL_report) {
     uint8_t data = 0;
-    if(Stepper_read_reg(DRV_CTRL5_REG, &data) != DRV_STATUS_BYTE_OK) 
+    if (Stepper_read_reg(DRV_CTRL5_REG, &data) != DRV_STATUS_BYTE_OK) 
         Stepper_FaultHandler();
+    if (DRV_HAL_SPI_status != HAL_OK) return DRV_HAL_SPI_status;
 
     data &= 0xE7;
     data |= (STL_report << 3) | (STL_en << 4);
-    if(Stepper_write_reg(DRV_CTRL5_REG, data) != DRV_STATUS_BYTE_OK)
+    if (Stepper_write_reg(DRV_CTRL5_REG, data) != DRV_STATUS_BYTE_OK)
         Stepper_FaultHandler();
+    return DRV_HAL_SPI_status;
 }
 
-void Stepper_learnStallCount() {
+HAL_StatusTypeDef Stepper_learnStallCount() {
     uint8_t data = 0;
-    if(Stepper_read_reg(DRV_CTRL5_REG, &data) != DRV_STATUS_BYTE_OK) 
+    if (Stepper_read_reg(DRV_CTRL5_REG, &data) != DRV_STATUS_BYTE_OK) 
         Stepper_FaultHandler();
+    if (DRV_HAL_SPI_status != HAL_OK) return DRV_HAL_SPI_status;
 
     data |= 0x20;
-    if(Stepper_write_reg(DRV_CTRL5_REG, data) != DRV_STATUS_BYTE_OK)
+    if (Stepper_write_reg(DRV_CTRL5_REG, data) != DRV_STATUS_BYTE_OK)
         Stepper_FaultHandler();
+    return DRV_HAL_SPI_status;
 }
 
-void Stepper_getStallThreshold(uint16_t *count) {
+HAL_StatusTypeDef Stepper_getStallThreshold(uint16_t *count) {
     uint8_t data = 0;
     uint16_t out;
-    Stepper_read_reg(DRV_CTRL6_REG, &data);
+    if (Stepper_read_reg(DRV_CTRL6_REG, &data) != DRV_STATUS_BYTE_OK)
+        Stepper_FaultHandler();
+    if (DRV_HAL_SPI_status != HAL_OK) return DRV_HAL_SPI_status;
+
     out = (uint16_t)data;
 
-    Stepper_read_reg(DRV_CTRL7_REG, &data);
+    if (Stepper_read_reg(DRV_CTRL7_REG, &data) != DRV_STATUS_BYTE_OK)
+        Stepper_FaultHandler();
+    if (DRV_HAL_SPI_status != HAL_OK) return DRV_HAL_SPI_status;
+
     data &= 0x0F;
     out |= ((uint16_t)data) << 8;
 
     *count = out;
+    return HAL_OK;
 }
 
 // 0 - 4095 | default: 3
-void Stepper_setStallThreshold(uint16_t count) {
+HAL_StatusTypeDef Stepper_setStallThreshold(uint16_t count) {
     uint8_t data = 0;
     data = (uint8_t)count;
-    if(Stepper_write_reg(DRV_CTRL6_REG, data) != DRV_STATUS_BYTE_OK)
+    if (Stepper_write_reg(DRV_CTRL6_REG, data) != DRV_STATUS_BYTE_OK)
         Stepper_FaultHandler();
+    if (DRV_HAL_SPI_status != HAL_OK) return DRV_HAL_SPI_status;
 
-    if(count > 255) {
-        if(Stepper_read_reg(DRV_CTRL7_REG, &data) != DRV_STATUS_BYTE_OK) 
+    if (count > 255) {
+        if (Stepper_read_reg(DRV_CTRL7_REG, &data) != DRV_STATUS_BYTE_OK) 
             Stepper_FaultHandler();
+        if (DRV_HAL_SPI_status != HAL_OK) return DRV_HAL_SPI_status;
 
         data &= 0xF0;
         data |= (uint8_t)(count >> 8);
-        if(Stepper_write_reg(DRV_CTRL7_REG, data) != DRV_STATUS_BYTE_OK)
+        if (Stepper_write_reg(DRV_CTRL7_REG, data) != DRV_STATUS_BYTE_OK)
             Stepper_FaultHandler();
+        if (DRV_HAL_SPI_status != HAL_OK) return DRV_HAL_SPI_status;
     }
+    return HAL_OK;
 }
 
 // default: DRV_TRQ_SCALE_NONE
-void Stepper_scaleTorqueCount(bool TRQ_scale) {
+HAL_StatusTypeDef Stepper_scaleTorqueCount(bool TRQ_scale) {
     uint8_t data = 0;
-    if(Stepper_read_reg(DRV_CTRL7_REG, &data) != DRV_STATUS_BYTE_OK) 
+    if (Stepper_read_reg(DRV_CTRL7_REG, &data) != DRV_STATUS_BYTE_OK) 
         Stepper_FaultHandler();
+    if (DRV_HAL_SPI_status != HAL_OK) return DRV_HAL_SPI_status;
 
     data &= 0xEF;
     data |= TRQ_scale << 4;
-    if(Stepper_write_reg(DRV_CTRL7_REG, data) != DRV_STATUS_BYTE_OK)
+    if (Stepper_write_reg(DRV_CTRL7_REG, data) != DRV_STATUS_BYTE_OK)
         Stepper_FaultHandler();
+    return DRV_HAL_SPI_status;
 }
 
 // default: ENABLE
-void Stepper_setSpreadSpectrum(bool SSC_en) {
+HAL_StatusTypeDef Stepper_setSpreadSpectrum(bool SSC_en) {
     uint8_t data = 0;
-    if(Stepper_read_reg(DRV_CTRL7_REG, &data) != DRV_STATUS_BYTE_OK) 
+    if (Stepper_read_reg(DRV_CTRL7_REG, &data) != DRV_STATUS_BYTE_OK) 
         Stepper_FaultHandler();
+    if (DRV_HAL_SPI_status != HAL_OK) return DRV_HAL_SPI_status;
 
     data &= 0xDF;
     data |= SSC_en << 5;
-    if(Stepper_write_reg(DRV_CTRL7_REG, data) != DRV_STATUS_BYTE_OK)
+    if (Stepper_write_reg(DRV_CTRL7_REG, data) != DRV_STATUS_BYTE_OK)
         Stepper_FaultHandler();
+    return DRV_HAL_SPI_status;
 }
 
 // default: DRV_RC_RIPPLE_1_PERCENT
-void Stepper_setRCRipple(uint8_t ripple) {
+HAL_StatusTypeDef Stepper_setRCRipple(uint8_t ripple) {
     uint8_t data = 0;
-    if(Stepper_read_reg(DRV_CTRL7_REG, &data) != DRV_STATUS_BYTE_OK) 
+    if (Stepper_read_reg(DRV_CTRL7_REG, &data) != DRV_STATUS_BYTE_OK) 
         Stepper_FaultHandler();
+    if (DRV_HAL_SPI_status != HAL_OK) return DRV_HAL_SPI_status;
 
     data &= 0x3F;
     data |= ripple << 6;
-    if(Stepper_write_reg(DRV_CTRL7_REG, data) != DRV_STATUS_BYTE_OK)
+    if (Stepper_write_reg(DRV_CTRL7_REG, data) != DRV_STATUS_BYTE_OK)
         Stepper_FaultHandler();
+    return DRV_HAL_SPI_status;
 }
 
-void Stepper_getTRQCount(uint16_t *count) {
+HAL_StatusTypeDef Stepper_getTRQCount(uint16_t *count) {
     uint8_t data = 0;
     uint16_t out;
-    Stepper_read_reg(DRV_CTRL8_REG, &data);
+    if (Stepper_read_reg(DRV_CTRL8_REG, &data) != DRV_STATUS_BYTE_OK)
+        Stepper_FaultHandler();
+    if (DRV_HAL_SPI_status != HAL_OK) return DRV_HAL_SPI_status;
+
     out = (uint16_t)data;
 
-    Stepper_read_reg(DRV_CTRL9_REG, &data);
+    if (Stepper_read_reg(DRV_CTRL9_REG, &data) != DRV_STATUS_BYTE_OK)
+        Stepper_FaultHandler();
+    if (DRV_HAL_SPI_status != HAL_OK) return DRV_HAL_SPI_status;
+
     data &= 0x0F;
     out |= ((uint16_t)data) << 8;
 
     *count = out;
+
+    return HAL_OK;
 }
 
-void Stepper_getREV_ID(uint8_t *id) {
+HAL_StatusTypeDef Stepper_getREV_ID(uint8_t *id) {
     uint8_t data = 0;
-    Stepper_read_reg(DRV_CTRL9_REG, &data);
+    if (Stepper_read_reg(DRV_CTRL9_REG, &data) != DRV_STATUS_BYTE_OK)
+        Stepper_FaultHandler();
+    if (DRV_HAL_SPI_status != HAL_OK) return DRV_HAL_SPI_status;
+
     data = data >> 4;
     *id = data;
+
+    return HAL_OK;
+}
+
+bool Stepper_SelfTest() {
+    uint8_t rev_id = 0;
+    if (Stepper_getFullStatus() != HAL_OK)
+        return false;
+    return !(DRV_status.FAULT);
 }
 
 
 /* ----------------------------- Stepper Motor Control Functions ---------------------------- */
 
-void Stepper_Init() {
-    Stepper_Wakeup();
-
+HAL_StatusTypeDef Stepper_Init() {
     stepper.mode = target_pos;
 
-    HAL_Delay(5);
+    if (Stepper_setOpenLoadMode(DRV_OL_RELEASE_IMMEDIATELY) != HAL_OK)
+        return DRV_HAL_SPI_status;
+    if (Stepper_setTorque(DRV_TRQ_08_16) != HAL_OK)
+        return DRV_HAL_SPI_status;
+    if (Stepper_setDecay(DRV_DECAY_SMART_TUNE_RIPPLE_CONTROL) != HAL_OK)
+        return DRV_HAL_SPI_status;
+    if (Stepper_setTOFF(DRV_TOFF_16_US) != HAL_OK)
+        return DRV_HAL_SPI_status;
+    if (Stepper_setMicrostep(DRV_STEP_SIZE) != HAL_OK)
+        return DRV_HAL_SPI_status;
+    if (Stepper_configInputMode(DRV_INPUT_MODE_PIN) != HAL_OK)
+        return DRV_HAL_SPI_status;
+    if (Stepper_setTemperatureFault(DRV_OTW_REPORT_ON_NFAULT, DRV_OTS_MODE_LATCHED_FAULT) != HAL_OK)
+        return DRV_HAL_SPI_status;
+    if (Stepper_setOvercurrentFault(DRV_OCP_MODE_LATCHED_FAULT) != HAL_OK)
+        return DRV_HAL_SPI_status;
+    if (Stepper_OpenLoadDetection(ENABLE) != HAL_OK)
+        return DRV_HAL_SPI_status;
+    if (Stepper_setStallDetection(DRV_STALL_DETECTION_ON, DRV_STALL_REPORT_ON_NFAULT) != HAL_OK)
+        return DRV_HAL_SPI_status;
+    if (Stepper_setStallThreshold(200) != HAL_OK)
+        return DRV_HAL_SPI_status;
+    if (Stepper_scaleTorqueCount(DRV_TRQ_SCALE_MLT8) != HAL_OK)
+        return DRV_HAL_SPI_status;
+    if (Stepper_setSpreadSpectrum(ENABLE) != HAL_OK)
+        return DRV_HAL_SPI_status;
+    if (Stepper_setRCRipple(DRV_RC_RIPPLE_1_PERCENT) != HAL_OK)
+        return DRV_HAL_SPI_status;
 
-    Stepper_setOpenLoadMode(DRV_OL_RELEASE_IMMEDIATELY);
-    Stepper_setTorque(DRV_TRQ_08_16);
-    Stepper_setDecay(DRV_DECAY_SMART_TUNE_RIPPLE_CONTROL);
-    Stepper_setTOFF(DRV_TOFF_16_US);
-    Stepper_setMicrostep(DRV_STEP_SIZE);
-    Stepper_configInputMode(DRV_INPUT_MODE_PIN);
-    Stepper_setTemperatureFault(DRV_OTW_REPORT_ON_NFAULT, DRV_OTS_MODE_LATCHED_FAULT);
-    Stepper_setOvercurrentFault(DRV_OCP_MODE_LATCHED_FAULT);
-    Stepper_OpenLoadDetection(ENABLE);
-    Stepper_setStallDetection(DRV_STALL_DETECTION_ON, DRV_STALL_REPORT_ON_NFAULT);
-    Stepper_setStallThreshold(200);
-    Stepper_scaleTorqueCount(DRV_TRQ_SCALE_MLT8);
-    Stepper_setSpreadSpectrum(ENABLE);
-    Stepper_setRCRipple(DRV_RC_RIPPLE_1_PERCENT);
-
-    Stepper_enableControl();
+    return Stepper_enableControl();
 }
 
 void Stepper_setDirection(stepper_dir_t dir) {
@@ -408,6 +500,11 @@ void Stepper_setDirection(stepper_dir_t dir) {
 }*/
 
 void Stepper_FaultHandler() {
+    if (DRV_HAL_SPI_status != HAL_OK) {
+        // Handle SPI communication error
+        // This could involve logging the error, attempting to reset the SPI interface, etc.
+        return;
+    }
     Stepper_getFullStatus();
 }
 
@@ -463,14 +560,14 @@ void Stepper_setTargetSpeed(float deg_s) {
 void Stepper_stopMoving() {
     Stepper_setSpeed(0);
     stepper.speed_target = 0;
-    stepper.pos_cmd = mag_angle;
+    stepper.pos_cmd = stepper.pos_prev;
 }
 
 // move by a certain number of degrees
 void Stepper_moveDeg(float degrees) {
     if(stepper.mode != target_pos) {
         stepper.mode = target_pos;
-        stepper.pos_cmd = mag_angle;
+        stepper.pos_cmd = stepper.pos_prev;
     }
     stepper.pos_cmd += degrees;
 }
@@ -484,7 +581,7 @@ void Stepper_updateSpeed(float freq, float pos) {
     switch(stepper.mode) {
         case target_pos:
             // calculate deviation from setpoint
-            pos_deviation = pos - stepper.pos_cmd;
+            pos_deviation = stepper.pos_prev - stepper.pos_cmd;
 
             // if position is within tolerance, disable timer
             if(pos_deviation < STEPPER_MAX_POSITION_ERROR && pos_deviation > -STEPPER_MAX_POSITION_ERROR)

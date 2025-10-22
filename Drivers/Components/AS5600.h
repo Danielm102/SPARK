@@ -15,9 +15,10 @@ extern I2C_HandleTypeDef hi2c2;
 HAL_StatusTypeDef AS5600_write_reg(uint8_t reg, uint8_t data);
 HAL_StatusTypeDef AS5600_read_reg(uint8_t start_reg, uint8_t *data, uint8_t length);
 
-void AS5600_getStatus(AS5600_status_t *status);
-void AS5600_readAngleRaw(float *raw_angle);
-void AS5600_readAngle(float *angle);
+HAL_StatusTypeDef AS5600_getStatus(AS5600_status_t *status);
+HAL_StatusTypeDef AS5600_readAngleRaw(float *raw_angle);
+HAL_StatusTypeDef AS5600_readAngle(float *angle);
+bool AS5600_SelfTest();
 
 void AngleConstrainedToContinuous(float constrained_angle, float *continuous_angle, float *rotation_count);
 
