@@ -445,7 +445,6 @@ HAL_StatusTypeDef Stepper_getREV_ID(uint8_t *id) {
 }
 
 bool Stepper_SelfTest() {
-    uint8_t rev_id = 0;
     if (Stepper_getFullStatus() != HAL_OK)
         return false;
     return !(DRV_status.FAULT);

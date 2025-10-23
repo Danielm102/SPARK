@@ -21,6 +21,27 @@ void ProcessCommandPacket() {
   // Check the command target
 
   if (command_packet.Packet_ID == PACKET_ID_COMMAND && command_packet.Data.command.command_target == COMMAND_TARGET_SPARK) {
-    // Process power unit command
+    // Process SPARK command
+    if (command_packet.Data.command.command_id == COMMAND_ID_SPARK_SET_ANGLE) {
+      uint8_t *angle_address = command_packet.Data.command.params;
+      float angle_target;
+      memcpy(&angle_target, angle_address, sizeof(float));
+      Stepper_setTargetDeg(angle_target);
+    } else if (command_packet.Data.command.command_id == COMMAND_ID_SPARK_SET_SPEED) {
+      uint8_t *speed_address = command_packet.Data.command.params;
+      float speed_target;
+      memcpy(&speed_target, speed_address, sizeof(float));
+      Stepper_setTargetDeg(speed_target);
+    } else if (command_packet.Data.command.command_id == COMMAND_ID_SPARK_EXIT_MODE) {
+      StateMachine_Dispatch(&spark_sm, EVENT_CMD_EXIT_MODE);
+    } else if (command_packet.Data.command.command_id == COMMAND_ID_SPARK_ZERO_STEPPER) {
+      StateMachine_Dispatch(&spark_sm, EVENT_CMD_ZERO_STEPPER);
+    } else if (command_packet.Data.command.command_id == COMMAND_ID_SPARK_FIND_MAX) {
+      StateMachine_Dispatch(&spark_sm, EVENT_CMD_FIND_MAX);
+    } else if (command_packet.Data.command.command_id == COMMAND_ID_SPARK_MODE_TARGET_POSITION) {
+      StateMachine_Dispatch(&spark_sm, EVENT_CMD_TARGET_POSITION);
+    } else if (command_packet.Data.command.command_id == COMMAND_ID_SPARK_MODE_TARGET_SPEED) {
+      StateMachine_Dispatch(&spark_sm, EVENT_CMD_TARGET_SPEED);
+    }
   }
 }

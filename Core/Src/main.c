@@ -60,8 +60,6 @@ DMA_HandleTypeDef hdma_tim2_ch1;
 volatile uint32_t tim7_ms = 0;
 uint32_t tim7_target_ms;
 
-StateMachine_t spark_sm;
-
 uint16_t tick_ks = 0;
 uint32_t tick_ms = 0;
 uint32_t tick_us = 0;
@@ -82,8 +80,8 @@ volatile uint8_t dma_waiting_ws2812;
 AS5600_status_t AS5600_status;
 
 float voltage_driver;
-float temperature_NTC1;
-float temperature_NTC2;
+float temperature_driver;
+float temperature_converter;
 
 float mag_angle = 0;
 float rotation_count = 0;
@@ -203,8 +201,8 @@ void Loop_100Hz()
 
 void Loop_10Hz()
 { 
-  temperature_NTC1 = readTemperature(ADC_CHANNEL_0);
-  temperature_NTC2 = readTemperature(ADC_CHANNEL_1);
+  temperature_driver = readTemperature(ADC_CHANNEL_0);
+  temperature_converter = readTemperature(ADC_CHANNEL_1);
   voltage_driver = readVoltage(ADC_CHANNEL_2) * 12.2f / 2.2f;
 
   StateMachine_DoActions(&spark_sm, 10);
@@ -245,6 +243,7 @@ void HAL_SPI_TxRxCpltCallback(SPI_HandleTypeDef *hspi) {
     // Process received data
     ProcessCommandPacket();
     Communication_ActivateReceive();
+    HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
   }
 }
 
@@ -776,7 +775,7 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOA_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, DRV_CS_Pin|LED1_Pin, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(GPIOB, DRV_CS_Pin, GPIO_PIN_SET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOA, DRV_DIR_Pin|DRV_SLEEP_Pin, GPIO_PIN_RESET);
@@ -785,6 +784,7 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(DRV_EN_GPIO_Port, DRV_EN_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_RESET);
   HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin : FC_CS_Pin */

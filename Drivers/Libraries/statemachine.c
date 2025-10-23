@@ -1,6 +1,6 @@
 #include "statemachine.h"
 
-StateMachine_t flight_sm;
+StateMachine_t spark_sm;
 
 uint8_t status_data = 0;
 uint8_t selftest_tries = 0;
@@ -146,7 +146,7 @@ static void StartupDo(StateMachine_t *sm, uint16_t freq) {
     } else {
         selftest_tries++;
         status_data |= (Stepper_SelfTest() << 0);
-        status_data |= (1 << 1); // (AS5600_SelfTest() << 1);
+        status_data |= (AS5600_SelfTest() << 1);
     }
 }
 static void InitDo(StateMachine_t *sm, uint16_t freq) {

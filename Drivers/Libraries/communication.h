@@ -4,7 +4,7 @@
 #include "main.h"
 
 //Compressed version of status.h and InterBoardCom.h from secondary board firmware, only what is needed for SPARK
-//Data is received as commands in data packets with ID COMMAND_TARGET_POWERUNIT, no InterBoardPacket_t struct is used
+//Data is received as commands in data packets with ID COMMAND_TARGET_SPARK, no InterBoardPacket_t struct is used
 
 #pragma pack(push, 1)
 
@@ -20,6 +20,16 @@ typedef enum __attribute__((packed)){
 
     PACKET_ID_COMMAND = 0x10, // Command packet
 } PacketType_t;
+
+typedef enum __attribute__((packed)){
+    COMMAND_ID_SPARK_SET_ANGLE = 0x00,
+    COMMAND_ID_SPARK_SET_SPEED = 0x01,
+    COMMAND_ID_SPARK_EXIT_MODE = 0x02,
+    COMMAND_ID_SPARK_ZERO_STEPPER = 0x03,
+    COMMAND_ID_SPARK_FIND_MAX = 0x04,
+    COMMAND_ID_SPARK_MODE_TARGET_POSITION = 0x05,
+    COMMAND_ID_SPARK_MODE_TARGET_SPEED = 0x06,
+} CommandID_t;
 
 typedef struct {
     CommandTarget_t command_target;

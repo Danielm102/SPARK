@@ -55,35 +55,8 @@ void ShowStatus(device_handle device, int8_t status, float freq_cycle, float fre
     if(device == RGB_LED) {
         SetLED_pulse(COLOR_BLUE);
         /*switch(status) {
-            case -4: // Selftest, error
-                SetLED_slide(COLOR_RED, COLOR_ORANGE);
-                break;
-            case -3: // Error, other
-                SetLED_blink(COLOR_RED);
-                break;
-            case -2: // MEMS Sensor Error
-                SetLED_pulse(COLOR_RED);
-                break;
-            case -1: // Fatal Error, Hard Fault
-                SetLED_color(COLOR_RED);
-                break;
             case 0: // Startup
                 SetLED_pulse(COLOR_MAGENTA);
-                break;
-            case 1: // GNSS Alignment
-                SetLED_pulse(COLOR_BLUE);
-                break;
-            case 2: // Standby
-                SetLED_color(COLOR_GREEN);
-                break;
-            case 3: // GNSS 2D Fix
-                SetLED_slide(COLOR_BLUE, COLOR_GREEN);
-                break;
-            case 4: // Servo moving
-                SetLED_slide(COLOR_YELLOW, COLOR_GREEN);
-                break;
-            case 5: // Move complete
-                SetLED_color(COLOR_CYAN);
                 break;
         }*/
     }

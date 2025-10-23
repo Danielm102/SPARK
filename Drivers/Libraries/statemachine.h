@@ -56,6 +56,7 @@ typedef void (*StateEntry_t)(StateMachine_t *sm);
 typedef void (*StateDo_t)(StateMachine_t *sm, uint16_t freq);
 typedef void (*StateExit_t)(StateMachine_t *sm);
 
+extern StateMachine_t spark_sm;
 /* --- Extern variables used in the state machine Entry, Do and Exit functions --- */
 extern TIM_HandleTypeDef htim7;
 extern uint32_t tim7_target_ms;
