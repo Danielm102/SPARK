@@ -55,13 +55,15 @@ bool AS5600_SelfTest() {
     return (status.MD && !status.ML);
 }
 
-void AngleConstrainedToContinuous(float constrained_angle, float *continuous_angle, float *rotation_count) {
-    float angle_new = constrained_angle + *rotation_count * 360.f;
-    if(angle_new - *continuous_angle < 180) {
-        rotation_count++;
+void AngleConstrainedToContinuous(float constrained_angle, float *continuous_angle, float *full_rotations) {
+    float angle_new = constrained_angle + *full_rotations * 360.f;
+    if ((angle_new - *continuous_angle) < -180) {
+        *full_rotations = *full_rotations + 1;
         *continuous_angle = angle_new + 360.f;
-    } else if(angle_new - *continuous_angle > 180) {
-        rotation_count--;
+    } else if ((angle_new - *continuous_angle) > 180) {
+        *full_rotations = *full_rotations - 1;
         *continuous_angle = angle_new - 360.f;
+    } else {
+        *continuous_angle = angle_new;
     }
 }

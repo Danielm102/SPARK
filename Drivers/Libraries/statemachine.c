@@ -64,6 +64,7 @@ static sm_state_t ZeroingRetract1Handler(sm_event_t event) {
         case EVENT_DRIVER_OVERHEAT:     return STATE_FAULT;
         case EVENT_CMD_EXIT_MODE:       return STATE_STANDBY;
         case EVENT_STEPPER_STALLED:     return STATE_ZEROING_EXTEND;
+        case EVENT_TIMER_ELAPSED:       return STATE_ZEROING_EXTEND;
         default: return STATE_ZEROING_RETRACT1;
     }
 }
@@ -73,6 +74,7 @@ static sm_state_t ZeroingExtendHandler(sm_event_t event) {
         case EVENT_UVLO:                return STATE_FAULT;
         case EVENT_DRIVER_OVERHEAT:     return STATE_FAULT;
         case EVENT_CMD_EXIT_MODE:       return STATE_STANDBY;
+        case EVENT_TIMER_ELAPSED:       return STATE_ZEROING_RETRACT2;
         default: return STATE_ZEROING_EXTEND;
     }
 }
@@ -83,6 +85,7 @@ static sm_state_t ZeroingRetract2Handler(sm_event_t event) {
         case EVENT_DRIVER_OVERHEAT:     return STATE_FAULT;
         case EVENT_CMD_EXIT_MODE:       return STATE_STANDBY;
         case EVENT_STEPPER_STALLED:     return STATE_STANDBY;
+        case EVENT_TIMER_ELAPSED:       return STATE_STANDBY; // failure?
         default: return STATE_ZEROING_RETRACT2;
     }
 }
@@ -111,14 +114,19 @@ static void InitEntry(StateMachine_t *sm) {
     stepper.neutral_angle = mag_angle_continuous;
 }
 static void StandbyEntry(StateMachine_t *sm) {
+    Stepper_enableControl();
     Stepper_Enable();
     stepper.active = false;
 }
 static void TargetPositionEntry(StateMachine_t *sm) {
+    Stepper_setStallDetection(DRV_STALL_DETECTION_ON, DRV_STALL_REPORT_ON_NFAULT);
     stepper.active = true;
+    stepper.mode = target_pos;
 }
 static void TargetSpeedEntry(StateMachine_t *sm) {
+    Stepper_setStallDetection(DRV_STALL_DETECTION_ON, DRV_STALL_NO_REPORT_NFAULT);
     stepper.active = true;
+    stepper.mode = target_speed;
 }
 static void ZeroingRetract1Entry(StateMachine_t *sm) {
     stepper.active = true;
@@ -152,7 +160,7 @@ static void StartupDo(StateMachine_t *sm, uint16_t freq) {
 static void InitDo(StateMachine_t *sm, uint16_t freq) {
     if (freq != 10) return;
 
-    Stepper_getFullStatus();
+    //Stepper_getFullStatus();
     if (!DRV_status.FAULT && voltage_driver >= 12.0f) {
         StateMachine_Dispatch(sm, EVENT_STEPPER_CONNECTED);
     }
@@ -177,6 +185,7 @@ static void ZeroingExtendExit(StateMachine_t *sm) {}
 static void ZeroingRetract2Exit(StateMachine_t *sm) {
     // set stepper neutral angle to current angle so 0 deg target angle corresponds to closed position
     stepper.neutral_angle = mag_angle_continuous;
+    Stepper_stopMoving();
 }
 static void FindMaxExit(StateMachine_t *sm) {}
 
@@ -246,7 +255,8 @@ uint32_t minEventDelayTable[EVENT_MAX] = {
     0,
     0,
     0,
-    500
+    500,
+    0
 };
 
 uint32_t maxEventDelayTable[STATE_MAX] = {
@@ -256,9 +266,9 @@ uint32_t maxEventDelayTable[STATE_MAX] = {
     0,
     0,
     0,
-    5000,
-    0,
-    1000,
+    25000,
+    2000,
+    2000,
     0
 };
 

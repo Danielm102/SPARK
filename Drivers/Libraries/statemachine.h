@@ -42,6 +42,7 @@ typedef enum {
     EVENT_CMD_EXIT_MODE,
     EVEMT_FIND_MAX_COMPLETE,
     EVENT_STEPPER_STALLED,
+    EVENT_TIMER_ELAPSED,
 
     EVENT_MAX
 } sm_event_t;

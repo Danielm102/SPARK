@@ -31,7 +31,7 @@ void ProcessCommandPacket() {
       uint8_t *speed_address = command_packet.Data.command.params;
       float speed_target;
       memcpy(&speed_target, speed_address, sizeof(float));
-      Stepper_setTargetDeg(speed_target);
+      Stepper_setTargetSpeed(speed_target);
     } else if (command_packet.Data.command.command_id == COMMAND_ID_SPARK_EXIT_MODE) {
       StateMachine_Dispatch(&spark_sm, EVENT_CMD_EXIT_MODE);
     } else if (command_packet.Data.command.command_id == COMMAND_ID_SPARK_ZERO_STEPPER) {

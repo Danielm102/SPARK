@@ -190,9 +190,13 @@ void RunOnce()
 void Loop_100Hz()
 {
   AS5600_readAngle(&mag_angle);
-  AngleConstrainedToContinuous(mag_angle, &rotation_count, &mag_angle_continuous);
+  AngleConstrainedToContinuous(mag_angle, &mag_angle_continuous, &rotation_count);
 
   StateMachine_DoActions(&spark_sm, 100);
+  Stepper_getFullStatus();
+  if (DRV_status.FAULT) {
+    Stepper_clearFaults();
+  }
 
   Stepper_updateSpeed(100, mag_angle_continuous);
 
@@ -230,8 +234,6 @@ void HAL_GPIO_EXTI_Falling_Callback(uint16_t GPIO_Pin) {
     }
     if (DRV_status.UVLO) StateMachine_Dispatch(&spark_sm, EVENT_UVLO);
     if (DRV_status.TF) StateMachine_Dispatch(&spark_sm, EVENT_DRIVER_OVERHEAT);
-
-    Stepper_clearFaults();
   } else if(GPIO_Pin == FC_CS_Pin) {
     // handle falling edge of SPI1 chip select - start of new command packet
     //Communication_ActivateReceive();
@@ -870,7 +872,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
       tim7_ms = 0;
       HAL_TIM_Base_Stop_IT(&htim7);
       
-      StateMachine_Dispatch(&spark_sm, EVENT_STEPPER_STALLED);
+      StateMachine_Dispatch(&spark_sm, EVENT_TIMER_ELAPSED);
     }
   }
 }
