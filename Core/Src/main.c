@@ -184,6 +184,8 @@ void RunOnce()
   HAL_Delay(100);
   StateMachine_Init(&spark_sm, STATE_STARTUP);
 
+  spi2_tx_buffer[0] = 69;
+
   Communication_ActivateReceive();
 }
 
@@ -197,7 +199,6 @@ void Loop_100Hz()
   if (DRV_status.FAULT) {
     Stepper_clearFaults();
   }
-
   Stepper_updateSpeed(100, mag_angle_continuous);
 
   ShowStatus(RGB_LED, spark_sm.currentState, 1, 100);

@@ -107,13 +107,11 @@ static void StartupEntry(StateMachine_t *sm) {
     Stepper_Wakeup();
     HAL_Delay(5);
 }
-static void InitEntry(StateMachine_t *sm) {
-    stepper.active = false;
+static void InitEntry(StateMachine_t *sm) {}
+static void StandbyEntry(StateMachine_t *sm) {
     // set stepper neutral angle to current angle so 0 deg target angle corresponds to closed position
     Stepper_Init();
     stepper.neutral_angle = mag_angle_continuous;
-}
-static void StandbyEntry(StateMachine_t *sm) {
     Stepper_enableControl();
     Stepper_Enable();
     stepper.active = false;
@@ -161,7 +159,7 @@ static void InitDo(StateMachine_t *sm, uint16_t freq) {
     if (freq != 10) return;
 
     //Stepper_getFullStatus();
-    if (!DRV_status.FAULT && voltage_driver >= 12.0f) {
+    if (!DRV_status.FAULT && voltage_driver >= 11.0f) {
         StateMachine_Dispatch(sm, EVENT_STEPPER_CONNECTED);
     }
 }

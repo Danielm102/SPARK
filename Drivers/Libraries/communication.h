@@ -29,6 +29,7 @@ typedef enum __attribute__((packed)){
     COMMAND_ID_SPARK_FIND_MAX = 0x04,
     COMMAND_ID_SPARK_MODE_TARGET_POSITION = 0x05,
     COMMAND_ID_SPARK_MODE_TARGET_SPEED = 0x06,
+    COMMAND_ID_SPARK_RESET = 0x07
 } CommandID_t;
 
 typedef struct {

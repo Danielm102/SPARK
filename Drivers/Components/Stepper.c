@@ -482,10 +482,7 @@ HAL_StatusTypeDef Stepper_Init() {
         return DRV_HAL_SPI_status;
     if (Stepper_setSpreadSpectrum(ENABLE) != HAL_OK)
         return DRV_HAL_SPI_status;
-    if (Stepper_setRCRipple(DRV_RC_RIPPLE_1_PERCENT) != HAL_OK)
-        return DRV_HAL_SPI_status;
-
-    return Stepper_enableControl();
+    return Stepper_setRCRipple(DRV_RC_RIPPLE_1_PERCENT);
 }
 
 void Stepper_setDirection(stepper_dir_t dir) {

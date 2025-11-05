@@ -40,8 +40,18 @@ void ProcessCommandPacket() {
       StateMachine_Dispatch(&spark_sm, EVENT_CMD_FIND_MAX);
     } else if (command_packet.Data.command.command_id == COMMAND_ID_SPARK_MODE_TARGET_POSITION) {
       StateMachine_Dispatch(&spark_sm, EVENT_CMD_TARGET_POSITION);
+      uint8_t torque = command_packet.Data.command.params[0];
+      if (torque > 16) torque = 16;
+      torque = 16 - torque;
+      Stepper_setTorque(torque);
     } else if (command_packet.Data.command.command_id == COMMAND_ID_SPARK_MODE_TARGET_SPEED) {
       StateMachine_Dispatch(&spark_sm, EVENT_CMD_TARGET_SPEED);
+      uint8_t torque = command_packet.Data.command.params[0];
+      if (torque > 16) torque = 16;
+      torque = 16 - torque;
+      Stepper_setTorque(torque);
+    } else if (command_packet.Data.command.command_id == COMMAND_ID_SPARK_RESET) {
+      HAL_NVIC_SystemReset();
     }
   }
 }
