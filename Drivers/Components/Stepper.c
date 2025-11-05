@@ -12,6 +12,9 @@ float pos_deviation;
 
 stepper_movement_t stepper;
 
+// variable used for preventing excessive use of fault clearing function
+uint32_t stepper_fault_clear_tick = 0;
+
 /* --------------------------------- DRV8434S SPI functions --------------------------------- */
 
 uint8_t Stepper_write_reg(uint8_t address, uint8_t data) {
@@ -290,6 +293,10 @@ HAL_StatusTypeDef Stepper_unlockRegisters() {
 }
 
 HAL_StatusTypeDef Stepper_clearFaults() {
+    // prevent excessive use of fault clearing function
+    if (uwTick - stepper_fault_clear_tick < 50) {
+        return DRV_HAL_SPI_status;
+    }
     uint8_t data = 0;
     if (Stepper_read_reg(DRV_CTRL4_REG, &data) != DRV_STATUS_BYTE_OK) 
         Stepper_FaultHandler();
@@ -298,6 +305,7 @@ HAL_StatusTypeDef Stepper_clearFaults() {
     data |= 0x80;
     if (Stepper_write_reg(DRV_CTRL4_REG, data) != DRV_STATUS_BYTE_OK)
         Stepper_FaultHandler();
+    stepper_fault_clear_tick = uwTick;
     return DRV_HAL_SPI_status;
 }
 
