@@ -185,6 +185,7 @@ void RunOnce()
   StateMachine_Init(&spark_sm, STATE_STARTUP);
 
   spi2_tx_buffer[0] = 69;
+  AS5600_readAngle(&mag_angle_continuous);
 
   Communication_ActivateReceive();
 }
