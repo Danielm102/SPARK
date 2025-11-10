@@ -53,12 +53,36 @@ void ShowStatus(device_handle device, int8_t status, float freq_cycle, float fre
     else LED_blink = !LED_blink;
 
     if(device == RGB_LED) {
-        SetLED_pulse(COLOR_BLUE);
-        /*switch(status) {
-            case 0: // Startup
+        switch(status) {
+            case STATE_FAULT:
+                SetLED_pulse(COLOR_RED);
+                break;
+            case STATE_STARTUP:
                 SetLED_pulse(COLOR_MAGENTA);
                 break;
-        }*/
+            case STATE_INIT:
+                SetLED_pulse(COLOR_BLUE);
+                break;
+            case STATE_STANDBY:
+                SetLED_pulse(COLOR_GREEN);
+                break;
+            case STATE_TARGET_POSITION:
+                SetLED_pulse(COLOR_VIOLET);
+                break;
+            case STATE_TARGET_SPEED:
+                SetLED_pulse(COLOR_CYAN);
+                break;
+            case STATE_ZEROING_RETRACT1:
+            case STATE_ZEROING_EXTEND:
+            case STATE_ZEROING_RETRACT2:
+                SetLED_pulse(COLOR_YELLOW);
+                break;
+            case STATE_FIND_MAX:
+                SetLED_pulse(COLOR_ORANGE);
+                break;
+            default:
+                break;
+        }
     }
     if(device == STATUS_LED_1) {
         

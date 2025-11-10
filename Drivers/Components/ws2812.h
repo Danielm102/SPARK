@@ -7,6 +7,8 @@ extern TIM_HandleTypeDef htim2;
 
 extern volatile uint8_t dma_waiting_ws2812;
 
+extern uint32_t led_skip_counter;
+
 void Set_LED (int Red, int Green, int Blue);
 
 void WS2812_Send (void);
