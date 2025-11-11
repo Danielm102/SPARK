@@ -73,8 +73,6 @@ uint32_t dt_10Hz;
 uint32_t loop_counter_100Hz = 0;
 uint32_t loop_counter_10Hz = 0;
 
-uint8_t spi2_tx_buffer[32] = {0};
-
 volatile uint8_t dma_waiting_ws2812;
 
 AS5600_status_t AS5600_status;
@@ -184,7 +182,6 @@ void RunOnce()
   HAL_Delay(100);
   StateMachine_Init(&spark_sm, STATE_STARTUP);
 
-  spi2_tx_buffer[0] = 69;
   AS5600_readAngle(&mag_angle_continuous);
 
   Communication_ActivateReceive();
@@ -246,8 +243,9 @@ void HAL_SPI_TxRxCpltCallback(SPI_HandleTypeDef *hspi) {
   if(hspi->Instance == SPI2) {
     // Process received data
     ProcessCommandPacket();
+    UpdateSPARKDataPacket(&spark_data_packet, mag_angle_continuous, mag_angle_continuous - stepper.pos_cmd, voltage_driver, temperature_driver, temperature_converter, (uint8_t)spark_sm.currentState);
+    spi2_tx_buffer[31] = getCRC(&spark_data_packet);
     Communication_ActivateReceive();
-    HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
   }
 }
 

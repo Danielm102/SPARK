@@ -6,6 +6,9 @@
 //Compressed version of status.h and InterBoardCom.h from secondary board firmware, only what is needed for SPARK
 //Data is received as commands in data packets with ID COMMAND_TARGET_SPARK, no InterBoardPacket_t struct is used
 
+extern SPI_HandleTypeDef hspi2;
+extern uint8_t spi2_tx_buffer[32];
+
 #pragma pack(push, 1)
 
 typedef enum __attribute__((packed)){
@@ -17,7 +20,7 @@ typedef enum __attribute__((packed)){
 typedef enum __attribute__((packed)){
     PACKET_ID_STATUS = 0x01, // VR data packet
     PACKET_ID_POWER = 0x02, // Power data packet
-
+    PACKET_ID_SPARK = 0x09, // SPARK data packet
     PACKET_ID_COMMAND = 0x10, // Command packet
 } PacketType_t;
 
@@ -29,8 +32,19 @@ typedef enum __attribute__((packed)){
     COMMAND_ID_SPARK_FIND_MAX = 0x04,
     COMMAND_ID_SPARK_MODE_TARGET_POSITION = 0x05,
     COMMAND_ID_SPARK_MODE_TARGET_SPEED = 0x06,
-    COMMAND_ID_SPARK_RESET = 0x07
+    COMMAND_ID_SPARK_RESET = 0x07,
+    COMMAND_ID_SPARK_READ_DATA = 0x08
 } CommandID_t;
+
+typedef struct {
+  float magAngle;      // 4 bytes
+  float posDeviation; // 8 bytes
+  float voltage_driver; // 12 bytes
+  float temperature_driver; // 16 bytes
+  float temperature_converter; // 20 bytes
+  uint8_t sparkStatus;  // 21 bytes
+  uint8_t reserved[5];  // 26 bytes
+} SPARKPayload_t;
 
 typedef struct {
     CommandTarget_t command_target;
@@ -39,6 +53,7 @@ typedef struct {
 } CommandPayload_t;
 
 typedef union {
+    SPARKPayload_t spark;
     CommandPayload_t command;
     uint8_t raw[26];
 } PayloadData_u;
@@ -51,6 +66,11 @@ typedef struct {
 } DataPacket_t;
 #pragma pack(pop)
 
+extern DataPacket_t spark_data_packet;
+
+uint8_t getCRC(DataPacket_t *packet);
+
+void UpdateSPARKDataPacket(DataPacket_t *spark_packet, float magAngle, float posDeviation, float voltage_driver, float temperature_NTC1, float temperature_NTC2, uint8_t sparkStatus);
 void ProcessCommandPacket(void);
 void Communication_ActivateReceive(void);
 
