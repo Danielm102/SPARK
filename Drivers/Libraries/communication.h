@@ -37,13 +37,14 @@ typedef enum __attribute__((packed)){
 } CommandID_t;
 
 typedef struct {
-  float magAngle;      // 4 bytes
-  float posDeviation; // 8 bytes
-  float voltage_driver; // 12 bytes
-  float temperature_driver; // 16 bytes
-  float temperature_converter; // 20 bytes
-  uint8_t sparkStatus;  // 21 bytes
-  uint8_t reserved[5];  // 26 bytes
+  float magAngle;
+  float magSpeed;
+  float posDeviation;
+  float voltage_driver;
+  float temperature_driver;
+  float temperature_converter;
+  uint8_t sparkStatus;
+  uint8_t reserved[1];
 } SPARKPayload_t;
 
 typedef struct {
@@ -70,7 +71,7 @@ extern DataPacket_t spark_data_packet;
 
 uint8_t getCRC(DataPacket_t *packet);
 
-void UpdateSPARKDataPacket(DataPacket_t *spark_packet, float magAngle, float posDeviation, float voltage_driver, float temperature_NTC1, float temperature_NTC2, uint8_t sparkStatus);
+void UpdateSPARKDataPacket(DataPacket_t *spark_packet, float magAngle, float magSpeed, float posDeviation, float voltage_driver, float temperature_NTC1, float temperature_NTC2, uint8_t sparkStatus);
 void ProcessCommandPacket(void);
 void Communication_ActivateReceive(void);
 

@@ -15,11 +15,12 @@ uint8_t getCRC(DataPacket_t *packet) {
     return crc;
 }
 
-void UpdateSPARKDataPacket(DataPacket_t *spark_packet, float magAngle, float posDeviation, float voltage_driver, float temperature_driver, float temperature_converter, uint8_t sparkStatus) {
+void UpdateSPARKDataPacket(DataPacket_t *spark_packet, float magAngle, float magSpeed, float posDeviation, float voltage_driver, float temperature_driver, float temperature_converter, uint8_t sparkStatus) {
     spark_packet->Packet_ID = PACKET_ID_SPARK;
     spark_packet->timestamp = HAL_GetTick();
 
     spark_packet->Data.spark.magAngle = magAngle;
+    spark_packet->Data.spark.magSpeed = magSpeed;
     spark_packet->Data.spark.posDeviation = posDeviation;
     spark_packet->Data.spark.voltage_driver = voltage_driver;
     spark_packet->Data.spark.temperature_driver = temperature_driver;

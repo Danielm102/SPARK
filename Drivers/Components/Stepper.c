@@ -593,10 +593,11 @@ void Stepper_updateSpeed(float freq, float pos) {
 
             else {
                 // apply K factor
-                pos_deviation *= -0.02;
+                float speed_pd = -0.04 * pos_deviation;
+                speed_pd += +0.002 * angle_cmd_diff;
 
                 // limit stepper angular rate
-                stepper.speed_target = fconstrain(pos_deviation, -STEPPER_MAX_SPEED, STEPPER_MAX_SPEED);
+                stepper.speed_target = fconstrain(speed_pd, -STEPPER_MAX_SPEED, STEPPER_MAX_SPEED);
             }
 
         case target_speed:

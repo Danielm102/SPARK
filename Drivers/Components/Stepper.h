@@ -12,7 +12,7 @@
 #define DRV_STEP_SIZE                   DRV_STEP_1_256
 #define DRV_STEP_DIV                    256
 #define STEPPER_STEPS_PER_REVOLUTION    200
-#define STEPPER_MAX_ACCELERATION        15     // revolutions/s²
+#define STEPPER_MAX_ACCELERATION        40     // revolutions/s²
 #define STEPPER_MAX_SPEED               3      // revolutions/s
 #define STEPPER_MIN_SPEED               0.0001 // revolutions/s
 #define STEPPER_MAX_POSITION_ERROR      0.05   // revolutions
@@ -85,6 +85,8 @@ extern DRV8434S_diag2_t DRV_diag2;
 extern stepper_movement_t stepper;
 
 extern uint8_t DRV_status_byte;
+
+extern float angle_cmd_diff;
 
 // DRV8434S SPI functions
 uint8_t Stepper_write_reg(uint8_t address, uint8_t data);

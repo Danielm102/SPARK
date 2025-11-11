@@ -82,8 +82,11 @@ float temperature_driver;
 float temperature_converter;
 
 float mag_angle = 0;
+float mag_speed = 0;
 float rotation_count = 0;
 float mag_angle_continuous = 0;
+float angle_cmd_prev = 0;
+float angle_cmd_diff = 0;
 
 /* USER CODE END PV */
 
@@ -185,12 +188,18 @@ void RunOnce()
   AS5600_readAngle(&mag_angle_continuous);
 
   Communication_ActivateReceive();
+
+  angle_cmd_prev = stepper.pos_cmd;
 }
 
 void Loop_100Hz()
 {
   AS5600_readAngle(&mag_angle);
   AngleConstrainedToContinuous(mag_angle, &mag_angle_continuous, &rotation_count);
+
+  mag_speed = (mag_angle_continuous - stepper.pos_prev) * 100.f;
+  angle_cmd_diff = (stepper.pos_cmd - angle_cmd_prev) * 100.f;
+  angle_cmd_prev = stepper.pos_cmd;
 
   StateMachine_DoActions(&spark_sm, 100);
   Stepper_getFullStatus();
@@ -243,7 +252,7 @@ void HAL_SPI_TxRxCpltCallback(SPI_HandleTypeDef *hspi) {
   if(hspi->Instance == SPI2) {
     // Process received data
     ProcessCommandPacket();
-    UpdateSPARKDataPacket(&spark_data_packet, mag_angle_continuous, mag_angle_continuous - stepper.pos_cmd, voltage_driver, temperature_driver, temperature_converter, (uint8_t)spark_sm.currentState);
+    UpdateSPARKDataPacket(&spark_data_packet, mag_angle_continuous - stepper.neutral_angle, angle_cmd_diff, mag_angle_continuous - stepper.pos_cmd, voltage_driver, temperature_driver, temperature_converter, (uint8_t)spark_sm.currentState);
     spi2_tx_buffer[31] = getCRC(&spark_data_packet);
     Communication_ActivateReceive();
   }
