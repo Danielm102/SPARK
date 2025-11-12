@@ -533,6 +533,7 @@ void Stepper_setSpeed(float revolutions_per_second) {
 
     // account for 16 bit prescaler limit by adjusting period
     if(prescaler > 65535) {
+        return; // temporary fix
         int period = round(prescaler/65536.f + 0.5) * TIM1_ARR;
         __HAL_TIM_SET_AUTORELOAD(&htim1, period - 1);
         __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, period / 2);
@@ -587,18 +588,12 @@ void Stepper_updateSpeed(float freq, float pos) {
             // calculate deviation from setpoint
             pos_deviation = stepper.pos_prev - stepper.pos_cmd;
 
-            // if position is within tolerance, disable timer
-            if(pos_deviation < STEPPER_MAX_POSITION_ERROR && pos_deviation > -STEPPER_MAX_POSITION_ERROR)
-                stepper.speed_target = 0;
+            // apply K factor
+            float speed_pd = -0.04 * pos_deviation;
+            speed_pd += +0.002 * angle_cmd_diff;
 
-            else {
-                // apply K factor
-                float speed_pd = -0.04 * pos_deviation;
-                speed_pd += +0.002 * angle_cmd_diff;
-
-                // limit stepper angular rate
-                stepper.speed_target = fconstrain(speed_pd, -STEPPER_MAX_SPEED, STEPPER_MAX_SPEED);
-            }
+            // limit stepper angular rate
+            stepper.speed_target = fconstrain(speed_pd, -STEPPER_MAX_SPEED, STEPPER_MAX_SPEED);
 
         case target_speed:
             // limit stepper angular acceleration

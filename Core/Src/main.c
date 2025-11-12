@@ -198,7 +198,7 @@ void Loop_100Hz()
   AngleConstrainedToContinuous(mag_angle, &mag_angle_continuous, &rotation_count);
 
   mag_speed = (mag_angle_continuous - stepper.pos_prev) * 100.f;
-  angle_cmd_diff = (stepper.pos_cmd - angle_cmd_prev) * 100.f;
+  angle_cmd_diff = ((stepper.pos_cmd - angle_cmd_prev) * 100.f) * 0.1f + angle_cmd_diff * 0.9f;
   angle_cmd_prev = stepper.pos_cmd;
 
   StateMachine_DoActions(&spark_sm, 100);

@@ -14,7 +14,7 @@
 #define STEPPER_STEPS_PER_REVOLUTION    200
 #define STEPPER_MAX_ACCELERATION        40     // revolutions/s²
 #define STEPPER_MAX_SPEED               3      // revolutions/s
-#define STEPPER_MIN_SPEED               0.0001 // revolutions/s
+#define STEPPER_MIN_SPEED               0.0005 // revolutions/s
 #define STEPPER_MAX_POSITION_ERROR      0.05   // revolutions
 
 #define CURRENT_SCALE_KV 1.32

@@ -20,7 +20,7 @@ void UpdateSPARKDataPacket(DataPacket_t *spark_packet, float magAngle, float mag
     spark_packet->timestamp = HAL_GetTick();
 
     spark_packet->Data.spark.magAngle = magAngle;
-    spark_packet->Data.spark.magSpeed = magSpeed;
+    spark_packet->Data.spark.magSpeed = stepper.speed_cmd;
     spark_packet->Data.spark.posDeviation = posDeviation;
     spark_packet->Data.spark.voltage_driver = voltage_driver;
     spark_packet->Data.spark.temperature_driver = temperature_driver;
@@ -46,6 +46,10 @@ void Communication_ActivateReceive(void) {
 }
 
 void ProcessCommandPacket() {
+    if (command_packet.crc != getCRC(&command_packet)) {
+        // CRC mismatch - invalid packet
+        return;
+    }
     // Check the command target
 
     if (command_packet.Packet_ID == PACKET_ID_COMMAND && command_packet.Data.command.command_target == COMMAND_TARGET_SPARK) {
