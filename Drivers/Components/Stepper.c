@@ -586,11 +586,11 @@ void Stepper_updateSpeed(float freq, float pos) {
     switch(stepper.mode) {
         case target_pos:
             // calculate deviation from setpoint
-            pos_deviation = stepper.pos_prev - stepper.pos_cmd;
+            pos_deviation = stepper.pos_cmd - stepper.pos_prev;
 
             // apply K factor
-            float speed_pd = -0.04 * pos_deviation;
-            speed_pd += +0.002 * angle_cmd_diff;
+            float speed_pd = 0.04 * pos_deviation;
+            speed_pd += 0.002 * angle_cmd_diff;
 
             // limit stepper angular rate
             stepper.speed_target = fconstrain(speed_pd, -STEPPER_MAX_SPEED, STEPPER_MAX_SPEED);
