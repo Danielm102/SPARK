@@ -44,7 +44,7 @@ typedef struct {
   float temperature_driver;
   float temperature_converter;
   uint8_t sparkStatus;
-  uint8_t reserved[1];
+  uint8_t as5600_status; // 0b00000HLD | H: high, L: low, D: detected
 } SPARKPayload_t;
 
 typedef struct {
@@ -71,7 +71,8 @@ extern DataPacket_t spark_data_packet;
 
 uint8_t getCRC(DataPacket_t *packet);
 
-void UpdateSPARKDataPacket(DataPacket_t *spark_packet, float magAngle, float magSpeed, float posDeviation, float voltage_driver, float temperature_NTC1, float temperature_NTC2, uint8_t sparkStatus);
+void UpdateSPARKDataPacket(DataPacket_t *spark_packet, float magAngle, float magSpeed, float posDeviation, float voltage_driver,
+    float temperature_driver, float temperature_converter, uint8_t sparkStatus, AS5600_status_t as5600_status);
 void ProcessCommandPacket(void);
 void Communication_ActivateReceive(void);
 

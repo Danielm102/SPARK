@@ -15,17 +15,22 @@ uint8_t getCRC(DataPacket_t *packet) {
     return crc;
 }
 
-void UpdateSPARKDataPacket(DataPacket_t *spark_packet, float magAngle, float magSpeed, float posDeviation, float voltage_driver, float temperature_driver, float temperature_converter, uint8_t sparkStatus) {
+void UpdateSPARKDataPacket(DataPacket_t *spark_packet, float magAngle, float magSpeed, float posDeviation, float voltage_driver,
+    float temperature_driver, float temperature_converter, uint8_t sparkStatus, AS5600_status_t as5600_status)
+{
     spark_packet->Packet_ID = PACKET_ID_SPARK;
     spark_packet->timestamp = HAL_GetTick();
 
     spark_packet->Data.spark.magAngle = magAngle;
-    spark_packet->Data.spark.magSpeed = stepper.speed_cmd;
+    spark_packet->Data.spark.magSpeed = magSpeed;
     spark_packet->Data.spark.posDeviation = posDeviation;
     spark_packet->Data.spark.voltage_driver = voltage_driver;
     spark_packet->Data.spark.temperature_driver = temperature_driver;
     spark_packet->Data.spark.temperature_converter = temperature_converter;
     spark_packet->Data.spark.sparkStatus = sparkStatus;
+    spark_packet->Data.spark.as5600_status = ((uint8_t)as5600_status.MD << 0) ||
+                                             ((uint8_t)as5600_status.ML << 1) ||
+                                             ((uint8_t)as5600_status.MH << 2);
 
     // Prepare SPI transmit buffer
     memcpy(spi2_tx_buffer, spark_packet, sizeof(DataPacket_t));

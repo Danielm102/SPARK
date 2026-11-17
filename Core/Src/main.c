@@ -252,7 +252,7 @@ void HAL_SPI_TxRxCpltCallback(SPI_HandleTypeDef *hspi) {
   if(hspi->Instance == SPI2) {
     // Process received data
     ProcessCommandPacket();
-    UpdateSPARKDataPacket(&spark_data_packet, mag_angle_continuous - stepper.neutral_angle, angle_cmd_diff, mag_angle_continuous - stepper.pos_cmd, voltage_driver, temperature_driver, temperature_converter, (uint8_t)spark_sm.currentState);
+    UpdateSPARKDataPacket(&spark_data_packet, mag_angle_continuous - stepper.neutral_angle, stepper.speed_cmd, mag_angle_continuous - stepper.pos_cmd, voltage_driver, temperature_driver, temperature_converter, (uint8_t)spark_sm.currentState, AS5600_status);
     spi2_tx_buffer[31] = getCRC(&spark_data_packet);
     Communication_ActivateReceive();
   }
