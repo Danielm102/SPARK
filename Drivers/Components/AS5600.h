@@ -1,7 +1,6 @@
 #ifndef AS5600_H_
 #define AS5600_H_
 
-#include "main.h"
 #include "stdbool.h"
 
 typedef struct {
@@ -9,6 +8,8 @@ typedef struct {
     bool ML;
     bool MD;
 } AS5600_status_t;
+
+#include "main.h"
 
 extern I2C_HandleTypeDef hi2c2;
 
